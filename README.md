@@ -6,7 +6,7 @@
 > 视觉骨架沿用像素办公室（pixel-office）风格，渲染层自研为 **PixiJS 8 + 原生 JS**，
 > 单页零构建依赖、可完全离线打开。
 
-![哈希麦多 agent 办公室](demo/shots/v08-rename-hud.png)
+![哈希麦多 agent 办公室](https://aka.doubaocdn.com/s/LrTwIMv09C)
 
 ---
 
@@ -40,7 +40,7 @@
 仓库根目录起一个静态服务器，浏览器打开 `/demo/office-demo.html`：
 
 ```bash
-git clone https://github.com/hashmai/hashmai-agent-office.git
+git clone https://github.com/128fei-wang/hashmai-agent-office.git
 cd hashmai-agent-office
 python3 -m http.server 8080
 # 浏览器打开 http://localhost:8080/demo/office-demo.html
@@ -48,6 +48,10 @@ python3 -m http.server 8080
 
 > 直接双击 `demo/office-demo.html` 也能跑（脚本与素材都是相对路径），
 > 但部分浏览器会因 `file://` 限制读不到 `../assets` 与 `./lib`，所以推荐上面的方式。
+>
+> **仓库不提交构建产物**：`assets/*.png`（贴图集 / 角色精灵）与 `demo/shots/` 截图不入库。
+> 从源码跑 `demo/office-demo.html` 前，先执行下面「方式三」的前四条生成素材；
+> 想零构建直接看，用「方式二」单文件版。
 
 **常用 URL 参数**
 

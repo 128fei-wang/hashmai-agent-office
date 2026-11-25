@@ -53,3 +53,8 @@ secrets/
 
 # 业主个人视频抽帧（版权归原视频，不入开源仓库）
 demo/shots/ref-a-wall-45s.png
+
+# 构建产物（clone 后由 tools/build_tiles.py、build_sprites.py 生成）
+assets/*.png
+# 文档截图（不入库，README 引用外链）
+demo/shots/

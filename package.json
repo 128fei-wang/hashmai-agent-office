@@ -16,12 +16,12 @@
   "author": "Hashmai",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hashmai/hashmai-agent-office.git"
+    "url": "git+https://github.com/128fei-wang/hashmai-agent-office.git"
   },
   "bugs": {
-    "url": "https://github.com/hashmai/hashmai-agent-office/issues"
+    "url": "https://github.com/128fei-wang/hashmai-agent-office/issues"
   },
-  "homepage": "https://github.com/hashmai/hashmai-agent-office#readme",
+  "homepage": "https://github.com/128fei-wang/hashmai-agent-office#readme",
   "files": [
     "demo/",
     "assets/",

@@ -9,7 +9,7 @@
 
 | # | 事项 | 现状 / 建议 | 影响 |
 | --- | --- | --- | --- |
-| 1 | **仓库名与归属** | 建议 `hashmai/hashmai-agent-office`（与 `package.json`、README 中的链接一致） | 改了要全局替换 4 处链接 |
+| 1 | **仓库名与归属** | 建议 `128fei-wang/hashmai-agent-office`（与 `package.json`、README 中的链接一致） | 改了要全局替换 4 处链接 |
 | 2 | **许可证** | 已落地 **Apache-2.0**（含专利授权，授权范围是 MIT 的超集；发布后不可追溯更换，故发布前定稿） | 影响他人能否商用、是否必须回馈源码 |
 | 3 | **公开还是私有** | 开源 = Public（社区规范文件才有意义）；先 Private 试推也行 | Public 后即被索引，撤回成本高 |
 
@@ -24,7 +24,7 @@
 
 ```bash
 cd /Users/hashmai/roost-im/roost-ui-arch
-git remote add origin https://github.com/hashmai/hashmai-agent-office.git
+git remote add origin https://github.com/128fei-wang/hashmai-agent-office.git
 git push -u origin main
 ```
 

@@ -73,7 +73,7 @@
 ## 四、仍需你决策（停点）
 
 1. **许可证（已定稿）**：Apache-2.0，`LICENSE` + `NOTICE` 已落地，README / package.json / THIRD-PARTY 同步；发布后不可追溯更换，故发布前定死。
-2. **仓库名 / 归属组织**：现按 `hashmai/hashmai-agent-office` 写死 4 处链接；换名我全局替换。
+2. **仓库名 / 归属组织**：现按 `128fei-wang/hashmai-agent-office` 写死 4 处链接；换名我全局替换。
 3. **公开还是私有**：Public 才会点亮社区规范与安全公告入口。
 4. 是否要我**代推到 GitHub**：本机未装 `gh`，且有 `GitHub-OAuth` 连接器——
    需要你一句「推」，我才建远端；否则执行 `GITHUB-PUBLISH.md` 第二节命令即可。

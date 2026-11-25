@@ -17,7 +17,7 @@ Built with **PixiJS 8** and plain JavaScript — no bundler, no npm dependencies
 ## Quick start
 
 ```bash
-git clone https://github.com/hashmai/hashmai-agent-office.git
+git clone https://github.com/128fei-wang/hashmai-agent-office.git
 cd hashmai-agent-office
 python3 -m http.server 8080
 # open http://localhost:8080/demo/office-demo.html
