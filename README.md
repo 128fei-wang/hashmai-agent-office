@@ -66,7 +66,7 @@ python3 -m http.server 8080
 
 ### 方式二：单文件版（零依赖验收入口）
 
-`demo/office-demo-single.html`（约 755 KB，`755,090 B`）把 PixiJS、`sim.js`、贴图全部内联，双击即开、
+`demo/office-demo-single.html`（约 755 KB，`755,547 B`）把 PixiJS、`sim.js`、贴图全部内联，双击即开、
 不需服务器、不需同目录其它文件。用于「只拿到一个 html 也要能看」的场景。
 
 ### 方式三：从源码重建
