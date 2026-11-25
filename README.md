@@ -95,8 +95,12 @@ python3 tools/check_seat_ids.py --require-unified   # seats=23 zones=8 fail=0
 python3 tools/contract_selftest.py                  # 契约自测：verdict=PASS
 ```
 
-`schema_validated` 一项需要 `jsonschema`：装了就走严格校验，没装则显式 **SKIP**
-（不会把 verdict 拉成 FAIL，clone 到干净机器照样绿）。想开严格校验：
+`schema_validated` 与 `schema_negative_controls` 两项**不需要任何 pip 依赖**也真判：
+装了 `jsonschema` 走官方实现，没装自动切内置的 draft 2020-12 子集校验器（只实现本仓
+schema 实际用到的关键字），实际走哪条路径写在 `contract-selftest.json` 的
+`schema.validator` 里。`schema_negative_controls` 是反向对照：10 例故意写坏的信封
+（缺必填、类型错、枚举越界、`seat_id` 不合 pattern 等）必须全部被拒 —— 用来证明
+校验器不是空过。想用官方实现做交叉复核：
 
 ```bash
 python3 -m pip install -r requirements-dev.txt

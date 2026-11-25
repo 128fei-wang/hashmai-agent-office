@@ -11,8 +11,10 @@
 产出 contract-selftest.json，可复跑：python3 tools/contract_selftest.py
 """
 
+import copy
 import json
 import os
+import re
 import time
 from collections import deque
 
@@ -24,6 +26,106 @@ AGENTS = 200          # 并发可见规模
 EV_PER_SEC = 500      # 突发吞吐
 SECONDS = 10          # 突发持续 10s
 RING_CAP = 4096
+
+
+# ---------------- 零依赖 schema 校验器（draft 2020-12 子集） ----------------
+# 只实现本仓 agent-event.schema.json 实际用到的关键字：type/const/enum/
+# minimum/maximum/maxLength/pattern/required/properties/additionalProperties/
+# items/oneOf/anyOf/allOf/$ref(本地)。装了 jsonschema 时优先用它，
+# 两条路径在同一批样例上结论必须一致（见 schema_negative_controls）。
+
+
+def _type_ok(inst, t):
+    if t == "object":
+        return isinstance(inst, dict)
+    if t == "array":
+        return isinstance(inst, list)
+    if t == "string":
+        return isinstance(inst, str)
+    if t == "integer":
+        return isinstance(inst, int) and not isinstance(inst, bool)
+    if t == "number":
+        return isinstance(inst, (int, float)) and not isinstance(inst, bool)
+    if t == "boolean":
+        return isinstance(inst, bool)
+    if t == "null":
+        return inst is None
+    return True                     # 未知类型不判错，避免误杀
+
+
+def _resolve_ref(root, ref):
+    if not ref.startswith("#/"):
+        raise ValueError("only local $ref supported: %s" % ref)
+    node = root
+    for part in ref[2:].split("/"):
+        node = node[part]
+    return node
+
+
+def mini_validate(inst, schema, root=None, path="$"):
+    """返回错误串列表；空列表＝通过。"""
+    root = root if root is not None else schema
+    errs = []
+    if schema is True or schema == {}:
+        return errs
+    if schema is False:
+        return ["%s: schema falsified" % path]
+    if "$ref" in schema:
+        return mini_validate(inst, _resolve_ref(root, schema["$ref"]), root, path)
+
+    t = schema.get("type")
+    if t is not None:
+        tlist = t if isinstance(t, list) else [t]
+        if not any(_type_ok(inst, x) for x in tlist):
+            return ["%s: want %s, got %s" % (path, "|".join(tlist), type(inst).__name__)]
+
+    if "const" in schema and inst != schema["const"]:
+        errs.append("%s: const %r != %r" % (path, schema["const"], inst))
+    if "enum" in schema and inst not in schema["enum"]:
+        errs.append("%s: %r not in enum" % (path, inst))
+
+    if isinstance(inst, (int, float)) and not isinstance(inst, bool):
+        if "minimum" in schema and inst < schema["minimum"]:
+            errs.append("%s: %r < minimum %r" % (path, inst, schema["minimum"]))
+        if "maximum" in schema and inst > schema["maximum"]:
+            errs.append("%s: %r > maximum %r" % (path, inst, schema["maximum"]))
+
+    if isinstance(inst, str):
+        if "maxLength" in schema and len(inst) > schema["maxLength"]:
+            errs.append("%s: len %d > maxLength %d" % (path, len(inst), schema["maxLength"]))
+        if "pattern" in schema and re.search(schema["pattern"], inst) is None:
+            errs.append("%s: %r fails pattern %r" % (path, inst, schema["pattern"]))
+
+    if isinstance(inst, list) and "items" in schema:
+        for i, x in enumerate(inst):
+            errs.extend(mini_validate(x, schema["items"], root, "%s[%d]" % (path, i)))
+
+    if isinstance(inst, dict):
+        for k in schema.get("required", []):
+            if k not in inst:
+                errs.append("%s: missing required %r" % (path, k))
+        props = schema.get("properties", {})
+        ap = schema.get("additionalProperties")
+        for k, v in inst.items():
+            if k in props:
+                errs.extend(mini_validate(v, props[k], root, "%s.%s" % (path, k)))
+            elif ap is False:
+                errs.append("%s: unexpected key %r" % (path, k))
+            elif isinstance(ap, dict):
+                errs.extend(mini_validate(v, ap, root, "%s.%s" % (path, k)))
+
+    if "oneOf" in schema:
+        hits = [i for i, sub in enumerate(schema["oneOf"])
+                if not mini_validate(inst, sub, root, path)]
+        if len(hits) != 1:
+            errs.append("%s: oneOf hit %d branches (need exactly 1)" % (path, len(hits)))
+    if "anyOf" in schema:
+        if not any(not mini_validate(inst, sub, root, path) for sub in schema["anyOf"]):
+            errs.append("%s: anyOf hit 0 branches" % path)
+    if "allOf" in schema:
+        for i, sub in enumerate(schema["allOf"]):
+            errs.extend(mini_validate(inst, sub, root, "%s/allOf[%d]" % (path, i)))
+    return errs
 
 
 # ---------------- 客户端侧最小实现（模拟 store + transport 语义） ----------------
@@ -173,24 +275,106 @@ def build_dup_envelopes(seq_start):
     return out
 
 
+
+def build_negative_envelopes(envs):
+    """反向对照：每条都必须被 schema 拒。证明校验器真在判，而不是空过。"""
+    base = copy.deepcopy(envs[0])
+    delta = None
+    for e in envs:
+        if e.get("kind") == "delta" and any(ev.get("type") == "agent_state"
+                                            for ev in e.get("events", [])):
+            delta = copy.deepcopy(e)
+            break
+    bad = []
+
+    a = copy.deepcopy(base); a.pop("seq", None)
+    bad.append(("missing required seq", a))
+
+    a = copy.deepcopy(base); a["seq"] = str(a["seq"])
+    bad.append(("seq as string", a))
+
+    a = copy.deepcopy(base); a["seq"] = 0
+    bad.append(("seq below minimum 1", a))
+
+    a = copy.deepcopy(base); a["v"] = 2
+    bad.append(("v breaches const 1", a))
+
+    a = copy.deepcopy(base); a["kind"] = "bogus"
+    bad.append(("kind outside enum", a))
+
+    a = copy.deepcopy(base); a["extra_field"] = 1
+    bad.append(("unknown top-level key", a))
+
+    if base.get("snapshot", {}).get("agents"):
+        a = copy.deepcopy(base); a["snapshot"]["agents"][0].pop("agent_id", None)
+        bad.append(("snapshot agent missing agent_id", a))
+
+    if delta is not None:
+        a = copy.deepcopy(delta)
+        for ev in a["events"]:
+            if ev.get("type") == "agent_state":
+                ev.pop("state", None)
+                break
+        bad.append(("agent_state missing state", a))
+
+        a = copy.deepcopy(delta)
+        for ev in a["events"]:
+            if ev.get("type") == "agent_state":
+                ev["seat_id"] = "BAD SEAT"
+                break
+        bad.append(("seat_id fails seat pattern", a))
+
+        a = copy.deepcopy(delta)
+        for ev in a["events"]:
+            if ev.get("type") == "agent_state":
+                ev["at"] = str(ev["at"])
+                break
+        bad.append(("event at as string", a))
+    return bad
+
 # ---------------- 跑 ----------------
 
 def main():
     envs, exp_in, exp_out, exp_state, exp_usage = build_envelopes()
 
-    # 严格 schema 校验（每个信封都过一遍）
-    # 未安装 jsonschema 时该项显式 SKIP，不把 verdict 拉成 FAIL ——
-    # 否则 clone 到干净机器上照 README 跑，第一屏就是红的。
-    schema_checked = 0
-    schema_skipped = False
+    # 严格 schema 校验（每个信封都过一遍）+ 反向对照（坏样例必须被拒）
+    # 装了 jsonschema 用它；干净机器没装则自动切内置零依赖校验器，不再 SKIP。
+    s = json.load(open(SCHEMA, encoding="utf-8"))
     try:
         import jsonschema
-        s = json.load(open(SCHEMA, encoding="utf-8"))
-        for e in envs:
-            jsonschema.validate(e, s)
-            schema_checked += 1
+        validator_kind = "jsonschema"
     except ImportError:
-        schema_skipped = True
+        validator_kind = "builtin-mini"
+
+    def schema_errors(inst):
+        """返回错误串列表；空列表＝通过。"""
+        if validator_kind == "jsonschema":
+            try:
+                jsonschema.validate(inst, s)
+                return []
+            except jsonschema.ValidationError as ex:
+                return ["jsonschema: " + str(ex.message)[:160]]
+        return mini_validate(inst, s)
+
+    schema_checked = 0
+    schema_first_error = None
+    for e in envs:
+        errs = schema_errors(e)
+        if errs:
+            if schema_first_error is None:
+                schema_first_error = errs[0]
+            continue
+        schema_checked += 1
+
+    neg_envs = build_negative_envelopes(envs)
+    neg_total = len(neg_envs)
+    neg_rejected = 0
+    neg_leaks = []
+    for label, inst in neg_envs:
+        if schema_errors(inst):
+            neg_rejected += 1
+        else:
+            neg_leaks.append(label)
 
     # 场景 A：顺序投递 + 20% 信封重复投递（应全部被 seq 去重丢掉）
     st = ClientStore()
@@ -238,12 +422,12 @@ def main():
 
     total_env = len(envs)
     ev_total = sum(len(e.get("events", [])) for e in envs)
-    if schema_skipped:
-        chk("schema_validated", True,
-            "SKIP: jsonschema 未安装（pip install -r requirements-dev.txt 后可开启严格校验）")
-    else:
-        chk("schema_validated", schema_checked == total_env,
-            f"{schema_checked}/{total_env} envelopes validated")
+    chk("schema_validated", schema_checked == total_env and schema_first_error is None,
+        f"{schema_checked}/{total_env} envelopes validated via {validator_kind}"
+        + (f"; first error: {schema_first_error}" if schema_first_error else ""))
+    chk("schema_negative_controls", neg_rejected == neg_total,
+        f"{neg_rejected}/{neg_total} invalid samples rejected via {validator_kind}"
+        + (f"; leaked: {','.join(neg_leaks)}" if neg_leaks else ""))
     chk("all_envelopes_applied", st.applied_envelopes == total_env,
         f"applied {st.applied_envelopes}/{total_env}")
     chk("duplicate_envelopes_dropped", st.skipped_duplicate_envelopes == dup_sent,
@@ -275,6 +459,8 @@ def main():
         "config": {"agents": AGENTS, "events_per_sec": EV_PER_SEC, "seconds": SECONDS,
                    "ring_cap": RING_CAP, "envelopes": total_env, "events": ev_total},
         "throughput": {"apply_ops_per_sec": round(ev_total / elapsed, 1), "elapsed_s": round(elapsed, 4)},
+        "schema": {"validator": validator_kind, "envelopes_checked": schema_checked,
+                   "negative_controls": f"{neg_rejected}/{neg_total}"},
         "verdict": "PASS" if all(c["ok"] for c in checks) else "FAIL",
         "checks": checks,
     }

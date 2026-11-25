@@ -6,7 +6,8 @@
   - 均可由 `tools/build_demo.py` / `tools/build_single_file.py` 从模板逐字节复现。
 - **契约入树**：`CONTRACT-01.md` 盖入 v1.2 定稿（8,183 B · sha256 `a1c031148a037569f52942ad488925c816dd6c94e904d27a23ed7427ec2ad536`），信封 `v/seq/ts(epoch ms)/kind` 不动，只增 5 事件 / 3 状态 / 2 snapshot 字段。
 - **D6 证据件换当前基线**：`D6-FPS-EVIDENCE.md` 由「历史 `0170be02` 待替换」改为三分结构（当前 `a96bad44` 60.0 fps / 历史 0170be02 / 自我限定）；fps 与 p5x 一律取 DS canonical `d6-fps.json`（`56c5b0dc…f3249`，1600×800、慢帧 0）。
-- **已知未补齐**：`tools/contract_selftest.py` 在干净 clone 下 `schema_validated` 为 `ok:true` 但 `detail=SKIP`（jsonschema 未装），12 条里 1 条空过 —— 不得计作「schema 校验通过」，待换零依赖校验器。
+- **契约自测去掉空过项**：`tools/contract_selftest.py` 原在无 `jsonschema` 时把 `schema_validated` 记 `ok:true` 但 `detail=SKIP`（12 条里 1 条空过，不得计作校验通过）。现改为双路径：装了 `jsonschema` 走官方实现，没装自动切内置 draft 2020-12 子集校验器（`type/const/enum/minimum/maximum/maxLength/pattern/required/properties/additionalProperties/items/oneOf/anyOf/allOf/$ref`），路径写入 `result.schema.validator`。新增第 13 条 `schema_negative_controls`：10 例故意写坏的信封（缺 `seq`、`seq` 传字符串、`seq=0`、`v≠1`、`kind` 越界、多出未知顶层键、snapshot 缺 `agent_id`、`agent_state` 缺 `state`、`seat_id` 不合 `^[a-z0-9_]+-S[0-9]{2}$`、`at` 传字符串）必须全部被拒。
+  实测两条路径均 13/13 PASS：官方路径 11/11 信封 + 10/10 反例；内置路径同结论；另跑 171 例语料（11 正 + 10 反 + 150 随机删/改/越界变异）两套校验器判定 **零分歧**。
 
 ## v0.9 (2026-11-25)
 
