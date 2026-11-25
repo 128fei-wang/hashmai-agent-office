@@ -112,7 +112,7 @@ CI（`.github/workflows/ci.yml`）在每次 push / PR 时跑上述两项，外�
 | 帧率 | 60.0 fps |
 | p50 / p95 / p99 / max 帧时 | 16.7 / 16.8 / 16.8 / 16.8 ms |
 | 慢帧（>20ms） | 0 |
-| 渲染侧单帧成本 | 0.14 ms |
+| 渲染侧单帧成本 | 0.14 ms（历史基线 `0170be02` 读数；当前基线 `a96bad44` 未单列该字段） |
 
 判据框架 P98（功能 / 工具 / 结构 / 数据 / 性能 / UI 六维，10 分制）：仓库内保留可复跑命令与证据文件，判据器本体由外部项目 `p98-criteria-01` 维护。
 
@@ -147,7 +147,7 @@ CI（`.github/workflows/ci.yml`）在每次 push / PR 时跑上述两项，外�
 | [`SEAT-ID-MAP.md`](SEAT-ID-MAP.md) | 工位编号规范（牌面 = seat_id） |
 | [`CONTRACT-01.md`](CONTRACT-01.md) | 对外契约（事件 schema / 席位模型） |
 | [`D5-DEST-SHARED-ROUTE.md`](D5-DEST-SHARED-ROUTE.md) | 目的地共享寻路与 30/50 agent 压测 |
-| [`D6-FPS-EVIDENCE-0170BE02.md`](D6-FPS-EVIDENCE-0170BE02.md) | 帧率第三方实测证据 |
+| [`D6-FPS-EVIDENCE.md`](D6-FPS-EVIDENCE.md) | 帧率实测证据（当前基线 `a96bad44` + 历史基线 `0170be02`） |
 
 ---
 
