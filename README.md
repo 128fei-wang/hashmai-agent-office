@@ -86,6 +86,14 @@ python3 tools/check_seat_ids.py --require-unified   # 工位编号一致性
 ```bash
 node tools/test_sim.js                              # 9/9 通过
 python3 tools/check_seat_ids.py --require-unified   # seats=23 zones=8 fail=0
+python3 tools/contract_selftest.py                  # 契约自测：verdict=PASS
+```
+
+`schema_validated` 一项需要 `jsonschema`：装了就走严格校验，没装则显式 **SKIP**
+（不会把 verdict 拉成 FAIL，clone 到干净机器照样绿）。想开严格校验：
+
+```bash
+python3 -m pip install -r requirements-dev.txt
 ```
 
 CI（`.github/workflows/ci.yml`）在每次 push / PR 时跑上述两项，外加
