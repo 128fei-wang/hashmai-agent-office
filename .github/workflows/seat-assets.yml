@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   seat:
@@ -30,11 +31,28 @@ jobs:
           wc -c CONTRACT-01.md assets/agents.png assets/office-tileset.png
 
       - name: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          exec 2>&1
           git config user.name "roost-seat-bot"
           git config user.email "128fei-wang@users.noreply.github.com"
           git add CONTRACT-01.md assets/agents.png assets/office-tileset.png
           git diff --cached --stat
           git commit -m "seat: CONTRACT-01.md -> b7aebb9d (8268 B); add assets/agents.png + assets/office-tileset.png (sha256 verified)"
           git push origin HEAD:main
+          rc=$?
+          echo "--- push rc=$rc"
+          {
+            echo "seat-assets push rc=$rc"
+            echo
+            echo '```'
+            git status --short
+            git log --oneline -2
+            echo '```'
+          } > /tmp/body.md
+          jq -n --arg t "seat-assets diag $(date -u +%Y-%m-%dT%H:%MZ) rc=$rc" --arg b "$(cat /tmp/body.md)" '{title:$t,body:$b}' > /tmp/issue.json
+          curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/128fei-wang/hashmai-agent-office/issues -d @/tmp/issue.json -o /tmp/resp.json || true
+          head -c 400 /tmp/resp.json || true
+          exit $rc
