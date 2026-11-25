@@ -58,3 +58,6 @@ demo/shots/ref-a-wall-45s.png
 assets/*.png
 # 文档截图（不入库，README 引用外链）
 demo/shots/
+
+# macOS 打包副产物（AppleDouble）
+._*
