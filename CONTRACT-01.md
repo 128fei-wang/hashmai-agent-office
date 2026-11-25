@@ -73,8 +73,8 @@
 ### 3.3 样例与自测
 
 - 样例：`sample-envelope.json`（v1 原样，仍通过）+ `sample-envelope-v12.json`（完整走一遍 dispatch→release→commuting→accept→reporting→report→standby→claim→working）。
-- 校验：`jsonschema` Draft202012Validator 实跑，2 个样例全过；三条反例全部被拒——B 世代信封（缺 `kind` / `ts` 为 ISO8601）、事件带未知键、`state=queued`。
-- 契约自测：`tools/contract_selftest.py`（zone 侧 11 项）。
+- 校验：包内内置 JSON Schema 子集校验器（只 python3 标准库、无 jsonschema 依赖，见 §6）实跑，2 个样例全过；四条反例全部被拒——B 世代信封（缺 `kind` / `ts` 为 ISO8601）、事件带未知键、`state=queued`、非法 `seat_id`。
+- 契约自测：`sh verify.sh`（17 项包内断言，见 §6）。
 
 ## 4. 职责边界
 
