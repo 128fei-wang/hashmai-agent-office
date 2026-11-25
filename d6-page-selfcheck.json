@@ -1,0 +1,97 @@
+{
+ "dim": "d6",
+ "artifact": "demo/office-demo.html?selfcheck=1",
+ "renderers": 1,
+ "canvas_elements": 1,
+ "renderer_mode": "pixi-webgl",
+ "renderer_type": "1",
+ "renderer_name": "webgl",
+ "pixi_version": "8.6.6",
+ "pixi_error": null,
+ "canvas": {
+  "nonblank_ratio": 0.6187,
+  "canvas_elements": 1,
+  "stable_same_canvas": true
+ },
+ "fps": 60.0,
+ "fps_evidence": {
+  "measured": true,
+  "render_cost_ms": 0.1,
+  "budget_ms": 16.666,
+  "headroom_x": null,
+  "vsync_cap": 60,
+  "method": "DS 17:22 真机离屏（--headless=new）真 GPU：丢 90 帧预热后采 300 帧，wall-clock 4999.8ms",
+  "note": "60.0 fps、p50 16.7ms、p95 16.8ms、p99 16.8ms、>20ms 慢帧 0；WebGL2 / ANGLE Metal (M5)，字节 a96bad44"
+ },
+ "checks": {
+  "empty_seat_visible": true,
+  "empty_seat_hud": 1,
+  "empty_seat_pixel_diff": 0.4798,
+  "lod_switch_no_rebuild": true,
+  "lod_labels": [
+   "过渡带",
+   "场景层"
+  ],
+  "lod_switched": true
+ },
+ "dbg": {
+  "sp0": [
+   1600,
+   913,
+   1
+  ],
+  "sp1": [
+   1600,
+   913,
+   1
+  ],
+  "baseN": 792,
+  "transitN": 792,
+  "baseFirst": [
+   104,
+   118,
+   136,
+   255,
+   85,
+   98,
+   115,
+   255
+  ],
+  "transitFirst": [
+   51,
+   64,
+   80,
+   255,
+   51,
+   64,
+   80,
+   255
+  ],
+  "seatTile": [
+   11,
+   12
+  ],
+  "cam": [
+   32.6,
+   178,
+   0.905
+  ]
+ },
+ "frames_rendered_in_selfcheck": 223,
+ "probe_state": "reporting",
+ "probe_dist_px": 41,
+ "away_at_frame": 128,
+ "grid": [
+   53,
+   24
+ ],
+ "seats": 23,
+ "agents": 23,
+ "generated_at_utc": "2026-11-25T09:31:38Z",
+ "note": "Pixi 单舞台（WebGL）路径；fps 由 DS 真机实测 60.0（字节 a96bad44）",
+ "_meta": {
+  "version": "v0.9-a96bad44",
+  "artifact_sha256": "a96bad44fbbe6c3f7a0786fdcac8bc3a6c89f7b7399939b9b4f96041adbc8e27",
+  "note": "字节 a96bad44（MOCK 标注版）自检重取数；fps 取 DS 17:22 真机实测 60.0"
+ }
+}
