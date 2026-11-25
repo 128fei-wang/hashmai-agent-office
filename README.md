@@ -168,11 +168,11 @@ CI（`.github/workflows/ci.yml`）在每次 push / PR 时跑上述两项，外�
 
 ## 许可
 
-代码以 [MIT License](LICENSE) 发布。
-仓库内 `demo/shots/` 下的截图由本项目渲染产出，随同 MIT 授权；
+代码以 [Apache License 2.0](LICENSE) 发布（含专利授权条款；见 [`NOTICE`](NOTICE)）。
+仓库内 `demo/shots/` 下的截图由本项目渲染产出，随同 Apache-2.0 授权；
 第三方依赖与素材的许可见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)。
 
-「哈希麦 / Hashmai」名称与标识不在 MIT 授权范围内（商标保留）。
+「哈希麦 / Hashmai」名称与标识不在 Apache-2.0 授权范围内（商标保留）。
 
 ## 免责
 

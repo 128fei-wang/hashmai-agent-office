@@ -9,7 +9,7 @@
 
 **整改后**：本地已是干净的 git 仓库（4 个提交 / 85 个文件 / 3.67 MB），
 社区规范 12 项全部到位，`git clone` 到空目录后单测与校验全部通过，产物 sha 与基线一致。
-**仍待你拍板 3 件事**：仓库名与归属、许可证（现 MIT）、公开还是私有。
+**仍待你拍板 2 件事**：仓库名与归属、公开还是私有（许可证已定稿 Apache-2.0，见 §4）。
 
 ## 一、新增文件（13 个）
 
@@ -17,7 +17,7 @@
 | --- | --- | --- |
 | `README.md` | 项目定位、截图、三种打开方式、URL 参数、结构、文档索引、性能基线 | 见仓库 |
 | `README.en.md` | 英文简介（给国际访问者与搜索引擎） | — |
-| `LICENSE` | MIT 全文（2026 Hashmai） | — |
+| `LICENSE` | Apache-2.0 全文（原文 sha256 `cfc7749b…` 校验一致） | — |
 | `CONTRIBUTING.md` | 环境、构建顺序、提交前自测、代码约定、路线图 | — |
 | `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 中文版（含四级执行梯度） | — |
 | `SECURITY.md` | 私密上报入口、受理范围表、可复现构建即防篡改闸门 | — |
@@ -72,7 +72,7 @@
 
 ## 四、仍需你决策（停点）
 
-1. **许可证**：现 MIT。要改 Apache-2.0 / AGPL 的话，我改 3 处（`LICENSE`、`README.md`、`package.json`）。
+1. **许可证（已定稿）**：Apache-2.0，`LICENSE` + `NOTICE` 已落地，README / package.json / THIRD-PARTY 同步；发布后不可追溯更换，故发布前定死。
 2. **仓库名 / 归属组织**：现按 `hashmai/hashmai-agent-office` 写死 4 处链接；换名我全局替换。
 3. **公开还是私有**：Public 才会点亮社区规范与安全公告入口。
 4. 是否要我**代推到 GitHub**：本机未装 `gh`，且有 `GitHub-OAuth` 连接器——

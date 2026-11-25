@@ -12,7 +12,7 @@
     "office",
     "agents"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Hashmai",
   "repository": {
     "type": "git",

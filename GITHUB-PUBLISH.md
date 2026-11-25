@@ -10,7 +10,7 @@
 | # | 事项 | 现状 / 建议 | 影响 |
 | --- | --- | --- | --- |
 | 1 | **仓库名与归属** | 建议 `hashmai/hashmai-agent-office`（与 `package.json`、README 中的链接一致） | 改了要全局替换 4 处链接 |
-| 2 | **许可证** | 已落地 **MIT**（最宽松、最常用于这类前端示例）；若你想用 Apache-2.0（带专利授权条款）或 AGPL，我改 `LICENSE` + README + `package.json` 三处 | 影响他人能否商用、是否必须回馈源码 |
+| 2 | **许可证** | 已落地 **Apache-2.0**（含专利授权，授权范围是 MIT 的超集；发布后不可追溯更换，故发布前定稿） | 影响他人能否商用、是否必须回馈源码 |
 | 3 | **公开还是私有** | 开源 = Public（社区规范文件才有意义）；先 Private 试推也行 | Public 后即被索引，撤回成本高 |
 
 > 未拍板前我不会创建远端、不会 push。仓库只在你本机。
@@ -82,7 +82,7 @@ git ls-files | wc -l          # 84
 
 | GitHub 社区规范项 | 状态 | 文件 |
 | --- | --- | --- |
-| 许可证 | ✅ | `LICENSE`（MIT） |
+| 许可证 | ✅ | `LICENSE`（Apache-2.0）+ `NOTICE` |
 | README（含用法/截图/结构） | ✅ | `README.md`、`README.en.md` |
 | 贡献指南 | ✅ | `CONTRIBUTING.md` |
 | 行为准则 | ✅ | `CODE_OF_CONDUCT.md`（Contributor Covenant 2.1） |

@@ -5,6 +5,9 @@
 
 ## [Unreleased]
 
+### 变更
+- 许可证定为 **Apache-2.0**（原 MIT），补 `NOTICE`、同步 README / package.json / THIRD-PARTY-NOTICES。
+
 ### 计划
 - 接真实事件流（store）替换模拟数据；点席位查看详情；30 秒回放；30/50 agent 渲染压测。
 - `nonblank_ratio` 判据改为「固定视口 + 前置断言 viewport / cam」后再作为门槛。

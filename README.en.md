@@ -39,5 +39,5 @@ documentation, architecture notes and design rationale.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) first;
 report security issues privately per [SECURITY.md](SECURITY.md).
-Released under the [MIT License](LICENSE). The "Hashmai / 哈希麦" name and logo are trademarks
-and are not covered by the MIT grant.
+Released under the [Apache License 2.0](LICENSE) (with an express patent grant; see [NOTICE](NOTICE)).
+The "Hashmai / 哈希麦" name and logo are trademarks and are not covered by that grant.
