@@ -33,11 +33,18 @@ jobs:
       - name: 工位编号一致性（期望 rc=0）
         run: python3 tools/check_seat_ids.py --require-unified
 
-      - name: 契约自测（无 jsonschema 的干净机器，期望 PASS 且 SKIP 不拉红）
+      - name: 契约自测（无 jsonschema 的干净机器，期望 PASS；schema 双检不得空过）
         run: |
           set -e
-          python3 -c "import jsonschema" 2>/dev/null || echo "jsonschema 未安装，走 SKIP 路径"
-          python3 tools/contract_selftest.py | tail -3
+          python3 -c "import jsonschema" 2>/dev/null && echo "jsonschema 已装：官方校验" || echo "jsonschema 未装：内置零依赖校验器"
+          python3 tools/contract_selftest.py > /tmp/selftest.out
+          tail -3 /tmp/selftest.out
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("contract-selftest.json", encoding="utf-8"))
+          print("validator:", d["schema"]["validator"], "| negatives:", d["schema"]["negative_controls"])
+          sys.exit(0 if d["verdict"] == "PASS" and all(c["ok"] for c in d["checks"]) else 1)
+          PY
 
       - name: 契约自测（装 jsonschema，走严格 schema 校验）
         run: |
@@ -108,7 +115,7 @@ jobs:
           python3 - <<'PY'
           import re
           html = open('demo/office-demo-single.html', encoding='utf-8').read()
-          bad = re.findall(r'(?:src|href)=["\']?\.\.?/', html)
+          bad = re.findall(r'(?:src|href)=[\"']?\.\.?/', html)
           assert not bad, f"单文件版仍残留外部引用: {bad[:5]}"
           print("单文件版无外部引用 OK，大小", len(html), "字节")
           PY
