@@ -1,0 +1,42 @@
+--- demo/office-demo.template.html	2026-11-24 13:08:53
++++ /tmp/roost-seatpatch/demo/office-demo.template.html	2026-11-24 15:33:39
+@@ -293,7 +293,7 @@
+         body.circle(0, -13, 5).fill({ color: 0xc9a883 });
+         const cap = new PIXI.Graphics();
+         cap.circle(0, -25, 3).fill({ color: 0x57c785 });
+-        const label = new PIXI.Text({ text: z.name.slice(0, 2) + '-' + String(i + 1).padStart(2, '0'),
++        const label = new PIXI.Text({ text: z.name.slice(0, 2) + '-S' + (s.seat_id.split('-S')[1] || String(i).padStart(2, '0')),
+           style: { fontFamily: 'PingFang SC', fontSize: 11, fill: 0xa8b8cc } });
+         label.anchor.set(0.5, 1); label.y = -28;
+         let spr = null;
+@@ -310,7 +310,7 @@
+         a.c = c; a.body = body; a.cap = cap; a.label = label; a.sprite = spr;
+       } else {
+         a.c = a;
+-        a.label = { text: z.name.slice(0, 2) + '-' + String(i + 1).padStart(2, '0') };
++        a.label = { text: z.name.slice(0, 2) + '-S' + (s.seat_id.split('-S')[1] || String(i).padStart(2, '0')) };
+       }
+       agents.push(a);
+     });
+--- tools/check_seat_ids.py	2026-11-24 13:36:58
++++ /tmp/roost-seatpatch/tools/check_seat_ids.py	2026-11-24 15:33:46
+@@ -60,15 +60,17 @@
+     check(len(seats) == declared, 'A4 席数 == declared_total', f'实得 {len(seats)} / 声明 {declared}')
+ 
+     t_agent = bool(re.search(r"id:\s*z\.id\s*\+\s*'-A'\s*\+\s*i", tpl))
+-    t_plate = bool(re.search(r"z\.name\.slice\(0,\s*2\).*String\(i\s*\+\s*1\)", tpl))
++    t_plate = bool(re.search(r"z\.name\.slice\(0,\s*2\).*'-S'.*seat_id", tpl))
+     t_cap = bool(re.search(r'if\s*\(i\s*>=\s*z\.headcount\)\s*return', tpl))
+     check(t_agent and t_plate and t_cap, 'A5 模板生成逻辑在位',
+           f'agent_id={t_agent} plate={t_plate} headcount截断={t_cap}')
+ 
++    # 牌面若直接取 seat_id 序号段（'-S' 形态），则偏移恒为 0
++    plate_by_seat = bool(re.search(r"z\.name\.slice\(0,\s*2\).*'-S'.*seat_id", tpl))
+     offs = []
+     for z in live:
+         for i, s in enumerate(z['seats'][:z['headcount']]):
+-            plate_no = i + 1
++            plate_no = int(s['seat_id'].split('-S')[-1]) if plate_by_seat else i + 1
+             seat_no = int(s['seat_id'].split('-S')[-1])
+             offs.append(plate_no - seat_no)
+ 

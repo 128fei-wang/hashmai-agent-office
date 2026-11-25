@@ -1,0 +1,11 @@
+# 默认由维护者 review
+*                       @hashmai
+
+# 渲染与构建产物改动，必须维护者过
+/demo/                  @hashmai
+/tools/                 @hashmai
+/assets/                @hashmai
+/.github/               @hashmai
+
+# 文档与社区文件可以被更轻量地合并，但仍需一次 review
+*.md                    @hashmai

@@ -1,0 +1,862 @@
+{
+ "grid": {
+  "w": 53,
+  "h": 24,
+  "tile_px": 32
+ },
+ "corridors": [
+  {
+   "id": "corridor_a",
+   "rect": [
+    1,
+    7,
+    51,
+    8
+   ]
+  },
+  {
+   "id": "corridor_b",
+   "rect": [
+    1,
+    15,
+    51,
+    16
+   ]
+  }
+ ],
+ "zones": [
+  {
+   "id": "boss_office",
+   "name": "老板办公室",
+   "role": "command",
+   "rect": [
+    1,
+    1,
+    8,
+    6
+   ],
+   "interior": [
+    2,
+    2,
+    7,
+    5
+   ],
+   "door": {
+    "tile": [
+     4,
+     6
+    ],
+    "zone_id": "boss_office"
+   },
+   "south_door": null,
+   "headcount": 2,
+   "capacity": 2,
+   "seats": [
+    {
+     "seat_id": "boss_office-S00",
+     "zone_id": "boss_office",
+     "tile": [
+      5,
+      4
+     ],
+     "facing": "up",
+     "desk_tile": [
+      5,
+      3
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "boss_office-S01",
+     "zone_id": "boss_office",
+     "tile": [
+      7,
+      4
+     ],
+     "facing": "up",
+     "desk_tile": [
+      7,
+      3
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  },
+  {
+   "id": "ops_center",
+   "name": "总经理运营中心",
+   "role": "dispatch",
+   "rect": [
+    10,
+    1,
+    27,
+    6
+   ],
+   "interior": [
+    11,
+    2,
+    26,
+    5
+   ],
+   "door": {
+    "tile": [
+     18,
+     6
+    ],
+    "zone_id": "ops_center"
+   },
+   "south_door": null,
+   "headcount": 3,
+   "capacity": 3,
+   "seats": [
+    {
+     "seat_id": "ops_center-S00",
+     "zone_id": "ops_center",
+     "tile": [
+      18,
+      4
+     ],
+     "facing": "up",
+     "desk_tile": [
+      18,
+      3
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "ops_center-S01",
+     "zone_id": "ops_center",
+     "tile": [
+      20,
+      4
+     ],
+     "facing": "up",
+     "desk_tile": [
+      20,
+      3
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "ops_center-S02",
+     "zone_id": "ops_center",
+     "tile": [
+      22,
+      4
+     ],
+     "facing": "up",
+     "desk_tile": [
+      22,
+      3
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  },
+  {
+   "id": "meeting",
+   "name": "会议室",
+   "role": "facility",
+   "rect": [
+    29,
+    1,
+    38,
+    6
+   ],
+   "interior": [
+    30,
+    2,
+    37,
+    5
+   ],
+   "door": {
+    "tile": [
+     33,
+     6
+    ],
+    "zone_id": "meeting"
+   },
+   "south_door": null,
+   "headcount": 0,
+   "capacity": 0,
+   "seats": []
+  },
+  {
+   "id": "pantry",
+   "name": "茶水间",
+   "role": "facility",
+   "rect": [
+    40,
+    1,
+    51,
+    6
+   ],
+   "interior": [
+    41,
+    2,
+    50,
+    5
+   ],
+   "door": {
+    "tile": [
+     45,
+     6
+    ],
+    "zone_id": "pantry"
+   },
+   "south_door": null,
+   "headcount": 0,
+   "capacity": 0,
+   "seats": []
+  },
+  {
+   "id": "tech",
+   "name": "技术部",
+   "role": "function",
+   "rect": [
+    1,
+    9,
+    14,
+    14
+   ],
+   "interior": [
+    2,
+    10,
+    13,
+    13
+   ],
+   "door": {
+    "tile": [
+     7,
+     9
+    ],
+    "zone_id": "tech"
+   },
+   "south_door": {
+    "tile": [
+     7,
+     14
+    ],
+    "zone_id": "tech"
+   },
+   "headcount": 3,
+   "capacity": 3,
+   "seats": [
+    {
+     "seat_id": "tech-S00",
+     "zone_id": "tech",
+     "tile": [
+      7,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      7,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "tech-S01",
+     "zone_id": "tech",
+     "tile": [
+      9,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      9,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "tech-S02",
+     "zone_id": "tech",
+     "tile": [
+      11,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      11,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  },
+  {
+   "id": "data",
+   "name": "数据部",
+   "role": "function",
+   "rect": [
+    16,
+    9,
+    33,
+    14
+   ],
+   "interior": [
+    17,
+    10,
+    32,
+    13
+   ],
+   "door": {
+    "tile": [
+     24,
+     9
+    ],
+    "zone_id": "data"
+   },
+   "south_door": {
+    "tile": [
+     24,
+     14
+    ],
+    "zone_id": "data"
+   },
+   "headcount": 3,
+   "capacity": 3,
+   "seats": [
+    {
+     "seat_id": "data-S00",
+     "zone_id": "data",
+     "tile": [
+      24,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      24,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "data-S01",
+     "zone_id": "data",
+     "tile": [
+      26,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      26,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "data-S02",
+     "zone_id": "data",
+     "tile": [
+      28,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      28,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  },
+  {
+   "id": "ui",
+   "name": "设计部",
+   "role": "function",
+   "rect": [
+    35,
+    9,
+    51,
+    14
+   ],
+   "interior": [
+    36,
+    10,
+    50,
+    13
+   ],
+   "door": {
+    "tile": [
+     43,
+     9
+    ],
+    "zone_id": "ui"
+   },
+   "south_door": {
+    "tile": [
+     43,
+     14
+    ],
+    "zone_id": "ui"
+   },
+   "headcount": 3,
+   "capacity": 3,
+   "seats": [
+    {
+     "seat_id": "ui-S00",
+     "zone_id": "ui",
+     "tile": [
+      41,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      41,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "ui-S01",
+     "zone_id": "ui",
+     "tile": [
+      43,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      43,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "ui-S02",
+     "zone_id": "ui",
+     "tile": [
+      45,
+      12
+     ],
+     "facing": "up",
+     "desk_tile": [
+      45,
+      11
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  },
+  {
+   "id": "hr",
+   "name": "人力资源",
+   "role": "function",
+   "rect": [
+    1,
+    17,
+    14,
+    22
+   ],
+   "interior": [
+    2,
+    18,
+    13,
+    21
+   ],
+   "door": {
+    "tile": [
+     7,
+     17
+    ],
+    "zone_id": "hr"
+   },
+   "south_door": null,
+   "headcount": 3,
+   "capacity": 3,
+   "seats": [
+    {
+     "seat_id": "hr-S00",
+     "zone_id": "hr",
+     "tile": [
+      7,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      7,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "hr-S01",
+     "zone_id": "hr",
+     "tile": [
+      9,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      9,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "hr-S02",
+     "zone_id": "hr",
+     "tile": [
+      11,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      11,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  },
+  {
+   "id": "finance",
+   "name": "财务部",
+   "role": "function",
+   "rect": [
+    16,
+    17,
+    33,
+    22
+   ],
+   "interior": [
+    17,
+    18,
+    32,
+    21
+   ],
+   "door": {
+    "tile": [
+     24,
+     17
+    ],
+    "zone_id": "finance"
+   },
+   "south_door": null,
+   "headcount": 3,
+   "capacity": 3,
+   "seats": [
+    {
+     "seat_id": "finance-S00",
+     "zone_id": "finance",
+     "tile": [
+      24,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      24,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "finance-S01",
+     "zone_id": "finance",
+     "tile": [
+      26,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      26,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "finance-S02",
+     "zone_id": "finance",
+     "tile": [
+      28,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      28,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  },
+  {
+   "id": "qa_lab",
+   "name": "验证实验室",
+   "role": "function",
+   "rect": [
+    35,
+    17,
+    51,
+    22
+   ],
+   "interior": [
+    36,
+    18,
+    50,
+    21
+   ],
+   "door": {
+    "tile": [
+     43,
+     17
+    ],
+    "zone_id": "qa_lab"
+   },
+   "south_door": null,
+   "headcount": 3,
+   "capacity": 3,
+   "seats": [
+    {
+     "seat_id": "qa_lab-S00",
+     "zone_id": "qa_lab",
+     "tile": [
+      41,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      41,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "qa_lab-S01",
+     "zone_id": "qa_lab",
+     "tile": [
+      43,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      43,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    },
+    {
+     "seat_id": "qa_lab-S02",
+     "zone_id": "qa_lab",
+     "tile": [
+      45,
+      20
+     ],
+     "facing": "up",
+     "desk_tile": [
+      45,
+      19
+     ],
+     "assigned": false,
+     "standby": false
+    }
+   ]
+  }
+ ],
+ "route_steps": {
+  "boss_office": {
+   "boss_office": 0,
+   "ops_center": 16,
+   "meeting": 31,
+   "pantry": 43,
+   "tech": 6,
+   "data": 23,
+   "ui": 42,
+   "hr": 16,
+   "finance": 33,
+   "qa_lab": 52
+  },
+  "ops_center": {
+   "boss_office": 16,
+   "ops_center": 0,
+   "meeting": 17,
+   "pantry": 29,
+   "tech": 14,
+   "data": 9,
+   "ui": 28,
+   "hr": 24,
+   "finance": 19,
+   "qa_lab": 38
+  },
+  "meeting": {
+   "boss_office": 31,
+   "ops_center": 17,
+   "meeting": 0,
+   "pantry": 14,
+   "tech": 29,
+   "data": 12,
+   "ui": 13,
+   "hr": 39,
+   "finance": 22,
+   "qa_lab": 23
+  },
+  "pantry": {
+   "boss_office": 43,
+   "ops_center": 29,
+   "meeting": 14,
+   "pantry": 0,
+   "tech": 41,
+   "data": 24,
+   "ui": 5,
+   "hr": 51,
+   "finance": 34,
+   "qa_lab": 15
+  },
+  "tech": {
+   "boss_office": 6,
+   "ops_center": 14,
+   "meeting": 29,
+   "pantry": 41,
+   "tech": 0,
+   "data": 19,
+   "ui": 38,
+   "hr": 10,
+   "finance": 27,
+   "qa_lab": 46
+  },
+  "data": {
+   "boss_office": 23,
+   "ops_center": 9,
+   "meeting": 12,
+   "pantry": 24,
+   "tech": 19,
+   "data": 0,
+   "ui": 21,
+   "hr": 27,
+   "finance": 10,
+   "qa_lab": 29
+  },
+  "ui": {
+   "boss_office": 42,
+   "ops_center": 28,
+   "meeting": 13,
+   "pantry": 5,
+   "tech": 38,
+   "data": 21,
+   "ui": 0,
+   "hr": 46,
+   "finance": 29,
+   "qa_lab": 10
+  },
+  "hr": {
+   "boss_office": 16,
+   "ops_center": 24,
+   "meeting": 39,
+   "pantry": 51,
+   "tech": 10,
+   "data": 27,
+   "ui": 46,
+   "hr": 0,
+   "finance": 19,
+   "qa_lab": 38
+  },
+  "finance": {
+   "boss_office": 33,
+   "ops_center": 19,
+   "meeting": 22,
+   "pantry": 34,
+   "tech": 27,
+   "data": 10,
+   "ui": 29,
+   "hr": 19,
+   "finance": 0,
+   "qa_lab": 21
+  },
+  "qa_lab": {
+   "boss_office": 52,
+   "ops_center": 38,
+   "meeting": 23,
+   "pantry": 15,
+   "tech": 46,
+   "data": 29,
+   "ui": 10,
+   "hr": 38,
+   "finance": 21,
+   "qa_lab": 0
+  }
+ },
+ "stats": {
+  "zones": 10,
+  "headcount": 23,
+  "seats_allocated": 23,
+  "standby_seats": 0,
+  "walkable_tiles": 698,
+  "desk_tiles": 23
+ },
+ "seat_policy": {
+  "seat_cap_per_dept": 3,
+  "dept_count": 7,
+  "formula": "boss 2 + 7 depts x 3 = 23 (no 8th dept; ops_center already counts as a dept)",
+  "occupancy": "one agent per seat at a time; no seat sharing",
+  "overflow": {
+   "standby_pool": true,
+   "standby_visible_max": 12,
+   "render_cap": 35,
+   "note": "30-50 agents: seats are the visual subset; the rest render as standby queue, load stays on the event layer"
+  }
+ },
+ "validation": {
+  "verdict": "PASS",
+  "checks": [
+   {
+    "check": "seats_unique_tiles",
+    "ok": true,
+    "detail": "23 seats / 23 unique tiles"
+   },
+   {
+    "check": "seats_inside_zone_interior",
+    "ok": true,
+    "detail": "23 seats checked"
+   },
+   {
+    "check": "seats_walkable",
+    "ok": true,
+    "detail": "every seat tile is walkable"
+   },
+   {
+    "check": "facing_points_to_blocked_tile",
+    "ok": true,
+    "detail": "violations []"
+   },
+   {
+    "check": "seats_reachable_from_door",
+    "ok": true,
+    "detail": "unreachable []"
+   },
+   {
+    "check": "doors_touch_corridor_and_interior",
+    "ok": true,
+    "detail": "10 zones"
+   },
+   {
+    "check": "capacity_covers_headcount",
+    "ok": true,
+    "detail": "boss_office 2>=2; ops_center 3>=3; meeting 0>=0; pantry 0>=0; tech 3>=3; data 3>=3; ui 3>=3; hr 3>=3; finance 3>=3; qa_lab 3>=3"
+   }
+  ]
+ }
+}

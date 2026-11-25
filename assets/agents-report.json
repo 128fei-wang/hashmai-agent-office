@@ -1,0 +1,76 @@
+{
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "S1",
+      "desc": "每格非空像素≥200",
+      "bad_cells": 0,
+      "ok": true
+    },
+    {
+      "id": "S2",
+      "desc": "idle 与 walk 单元必须不同",
+      "same": 0,
+      "ok": true
+    },
+    {
+      "id": "S3",
+      "desc": "三套配色主色互不相同",
+      "colors": [
+        [
+          86,
+          148,
+          212
+        ],
+        [
+          222,
+          168,
+          74
+        ],
+        [
+          96,
+          190,
+          168
+        ]
+      ],
+      "ok": true
+    },
+    {
+      "id": "S4",
+      "desc": "色板数量≤24（像素风控制）",
+      "n": 11,
+      "ok": true
+    },
+    {
+      "id": "S5",
+      "desc": "每格脚部（末行）有像素",
+      "bad": 0,
+      "ok": true
+    }
+  ],
+  "cell": [
+    32,
+    48
+  ],
+  "grid": [
+    9,
+    8
+  ],
+  "palettes": [
+    "tech",
+    "ops",
+    "staff"
+  ],
+  "dirs": [
+    "S",
+    "E",
+    "N",
+    "W"
+  ],
+  "states": [
+    "idle",
+    "walk"
+  ],
+  "bad": [],
+  "size": 4696
+}

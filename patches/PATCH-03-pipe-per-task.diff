@@ -1,0 +1,146 @@
+--- demo/office-demo.template.html
++++ demo/office-demo.template.html
+@@ -20,10 +20,15 @@
+   #hint { position: absolute; left: 14px; bottom: 10px; color: #6b7d94; font-size: 11px; }
+   /* 任务生命周期流水条：同一件事从下达到回位的一条线（借机制，不搬数据墙皮） */
+   #pipe { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%);
+-    display: flex; align-items: center; gap: 6px;
+-    background: rgba(16,22,30,.82); border: 1px solid #2a3546; border-radius: 999px;
+-    padding: 5px 12px; color: #5d6b7d; font-size: 12px; letter-spacing: .5px; pointer-events: none;
+-    transition: border-color .3s; }
++    display: flex; align-items: flex-start; gap: 8px;
++    background: rgba(16,22,30,.82); border: 1px solid #2a3546; border-radius: 10px;
++    padding: 6px 12px; color: #5d6b7d; font-size: 12px; letter-spacing: .5px; pointer-events: none;
++    transition: border-color .3s; max-width: 92vw; }
++  #pipe .prows { display: flex; flex-direction: column; gap: 3px; }
++  #pipe .prow { display: flex; align-items: center; gap: 6px; }
++  #pipe .prow[data-active="1"] .ptag { color: #cfd9e6; }
++  #pipe .ptag { width: 104px; color: #6b7d94; font-size: 11px; white-space: nowrap;
++    overflow: hidden; text-overflow: ellipsis; }
+   #pipe i { display: block; width: 16px; height: 1px; background: #33404f; transition: background .3s; }
+   #pipe .pnode { padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; transition: all .3s; }
+   #pipe .pnode.on { color: #dfe9f5; border-color: #3d5068; background: rgba(61,80,104,.35); }
+@@ -46,12 +51,8 @@
+ <div id="taskbar"><b>派单流</b><div id="tlist"></div></div>
+ <div id="hint">滚轮缩放 · 拖拽平移 · 空格暂停 · 双击回到全图</div>
+ <div id="pipe">
+-  <span class="plabel">任务流水</span>
+-  <span class="pnode" data-k="1">01 下发</span><i data-i="1"></i>
+-  <span class="pnode" data-k="2">02 拆单</span><i data-i="2"></i>
+-  <span class="pnode" data-k="3">03 执行</span><i data-i="3"></i>
+-  <span class="pnode" data-k="4">04 汇报</span><i data-i="4"></i>
+-  <span class="pnode" data-k="5">05 回位</span>
++  <span class="plabel" style="padding-top:2px">任务流水</span>
++  <div class="prows" id="prows"></div>
+ </div>
+ 
+ <script src="./lib/pixi.min.js"></script>
+@@ -500,16 +501,46 @@
+     });
+   }
+   // 底部生命周期流水条（DOM，不进画布取样，不影响 D6）
+-  function setPipe(n) {
+-    document.querySelectorAll('#pipe .pnode').forEach(el => {
+-      const k = +el.dataset.k;
++  // 一单一行：并发时各单各自推进，不再互相覆盖；行数=活跃单数（上限 4）。
++  const PIPE_STAGES = ['01 下发', '02 拆单', '03 执行', '04 汇报', '05 回位'];
++  const PROWS = [];
++  function pipeOpen(label) {
++    const rows = document.getElementById('prows');
++    const el = document.createElement('div');
++    el.className = 'prow'; el.dataset.active = '1';
++    const tag = document.createElement('span');
++    tag.className = 'ptag'; tag.textContent = label;
++    el.appendChild(tag);
++    const nodes = [], links = [];
++    PIPE_STAGES.forEach((name, idx) => {
++      const n = document.createElement('span');
++      n.className = 'pnode'; n.textContent = name;
++      el.appendChild(n); nodes.push(n);
++      if (idx < PIPE_STAGES.length - 1) {
++        const bar = document.createElement('i');
++        el.appendChild(bar); links.push(bar);
++      }
++    });
++    rows.appendChild(el);
++    const row = { el: el, nodes: nodes, links: links };
++    PROWS.push(row);
++    return row;
++  }
++  function setPipe(row, n) {
++    if (!row) return;
++    row.nodes.forEach((el, idx) => {
++      const k = idx + 1;
+       el.classList.toggle('on', k <= n);
+       el.classList.toggle('now', k === n);
+     });
+-    document.querySelectorAll('#pipe i').forEach(el => {
+-      el.classList.toggle('on', +el.dataset.i < n);
+-    });
++    row.links.forEach((el, idx) => el.classList.toggle('on', idx + 1 < n));
+   }
++  function pipeClose(row, delay) {
++    if (!row) return;
++    row.el.dataset.active = '0';
++    const i = PROWS.indexOf(row); if (i >= 0) PROWS.splice(i, 1);
++    setTimeout(() => { if (row.el.parentNode) row.el.parentNode.removeChild(row.el); }, delay || 1500);
++  }
+ 
+   // ---------- 派单 ----------
+   const busyZones = new Set();
+@@ -521,13 +552,14 @@
+ 
+   async function runTask(agent, z) {
+     busyZones.add(z.id); agent.busy = true;
++    const row = pipeOpen(z.name + ' · ' + agent.id.replace(/^.*-/, ''));
+     const p1 = chain([bossSeat, doorPt(boss), doorPt(ops)]);
+     const p2 = chain([gmSeat, doorPt(ops), doorPt(z), seatPt(agent)]);
+     const p3 = chain([seatPt(agent), doorPt(z), doorPt(ops), gmSeat]);
+     const p4 = p2 && p2.slice().reverse();
+     const tf = newFlow(0xffcc66);          // 一单一条线：dispatch 建，report 收
+ 
+-    setPipe(1);
++    setPipe(row, 1);
+     const b1 = bubble('命令'); b1.x = bossSeat.x; b1.y = bossSeat.y - 30;
+     flowExtend(tf, p1, 0xffcc66, 220);
+     addLog('<span style="color:#ffcc66">老板下达</span> → ' + z.name);
+@@ -535,7 +567,7 @@
+     killBubble(b1);
+     // 线留着：任务没结束，线就一直在（不再到站即销毁）
+ 
+-    setPipe(2);
++    setPipe(row, 2);
+     const b2 = bubble('拆单', 0x66aaff); b2.x = gmSeat.x; b2.y = gmSeat.y - 30;
+     flowExtend(tf, p2, 0x66aaff, 220);
+     addLog('<span style="color:#66aaff">总经理拆单</span> → ' + z.name + ' · ' + agent.id);
+@@ -543,10 +575,10 @@
+     await moveTo(b2, p2, 220);
+     killBubble(b2);
+ 
+-    setPipe(3);
++    setPipe(row, 3);
+     agent.state = 'working'; paint(agent);
+     await sleep(6000);                     // 执行段最长：此时线停着、点停在工位，图上有线可读
+-    setPipe(4);
++    setPipe(row, 4);
+     agent.state = 'reporting'; paint(agent);
+     flowExtend(tf, p3, 0x57c785, 190);
+     addLog('<span style="color:#9fb2c9">' + agent.id + ' 去上级汇报</span>');
+@@ -556,7 +588,7 @@
+     await sleep(1500);
+     killBubble(rb);
+ 
+-    setPipe(5);
++    setPipe(row, 5);
+     const f4 = newFlow(0x8a93a3);
+     flowExtend(f4, p4, 0x8a93a3, 190);
+     await moveTo(agent.c, p4, 190);
+@@ -564,7 +596,7 @@
+     agent.state = 'idle'; paint(agent);
+     agent.busy = false; busyZones.delete(z.id);
+     addLog('<span style="color:#6b7d94">' + agent.id + ' 回到工位</span>');
+-    if (!busyZones.size) setPipe(0);
++    pipeClose(row, 1600);
+   }
+ 
+   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }

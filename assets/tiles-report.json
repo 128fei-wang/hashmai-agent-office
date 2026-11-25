@@ -1,0 +1,62 @@
+{
+ "verdict": "PASS",
+ "tile_px": 32,
+ "map": "53x24",
+ "assets": [
+  "assets/office-tileset.png",
+  "assets/office-map.tmj",
+  "assets/office-map-preview.png"
+ ],
+ "checks": [
+  {
+   "id": "C1_layer_size",
+   "verdict": "PASS",
+   "detail": "53x24"
+  },
+  {
+   "id": "C2_floor_gid_domain",
+   "verdict": "PASS",
+   "detail": "bad=[]"
+  },
+  {
+   "id": "C3a_zone_floor_cells",
+   "verdict": "PASS",
+   "detail": "504/504"
+  },
+  {
+   "id": "C3b_corridor_cells",
+   "verdict": "PASS",
+   "detail": "204/204"
+  },
+  {
+   "id": "C4a_desks",
+   "verdict": "PASS",
+   "detail": "desk=23/23"
+  },
+  {
+   "id": "C4b_chairs",
+   "verdict": "PASS",
+   "detail": "chair=23/23"
+  },
+  {
+   "id": "C4c_no_furniture_on_corridor",
+   "verdict": "PASS",
+   "detail": "overlap=0"
+  },
+  {
+   "id": "C7_facility_props",
+   "verdict": "PASS",
+   "detail": "table=12 counter=16"
+  },
+  {
+   "id": "C5_objects",
+   "verdict": "PASS",
+   "detail": "zone=10 seat=23 uniq=True"
+  },
+  {
+   "id": "C6_preview",
+   "verdict": "PASS",
+   "detail": "1696x768 colors=24"
+  }
+ ]
+}

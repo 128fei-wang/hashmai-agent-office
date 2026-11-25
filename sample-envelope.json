@@ -1,0 +1,54 @@
+{
+ "v": 1,
+ "seq": 12873,
+ "ts": 1795490160123,
+ "kind": "delta",
+ "events": [
+  {
+   "type": "agent_upsert",
+   "agent": {
+    "agent_id": "agent_73ff",
+    "alias": "豆包",
+    "state": "working",
+    "task_id": "DB-1124",
+    "progress": 0.42,
+    "tokens_in": 1200,
+    "tokens_out": 800,
+    "cost_usd": 0.031,
+    "started_at": 1795490000000,
+    "updated_at": 1795490160000,
+    "meta": {
+     "channel": "clawchat",
+     "model": "doubao"
+    }
+   }
+  },
+  {
+   "type": "usage_delta",
+   "agent_id": "agent_73ff",
+   "tokens_in": 120,
+   "tokens_out": 80,
+   "cost_usd": 0.003,
+   "at": 1795490160000,
+   "idempotency_key": "d-1"
+  },
+  {
+   "type": "agent_state",
+   "agent_id": "agent_73ff",
+   "state": "done",
+   "task_id": null,
+   "at": 1795490161000
+  },
+  {
+   "type": "log",
+   "agent_id": "agent_73ff",
+   "level": "info",
+   "text": "交件完成",
+   "at": 1795490161001
+  },
+  {
+   "type": "heartbeat",
+   "at": 1795490162000
+  }
+ ]
+}

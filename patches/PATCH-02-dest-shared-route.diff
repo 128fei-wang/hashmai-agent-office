@@ -1,0 +1,45 @@
+--- demo/office-demo.template.html	2026-11-24 13:08:53
++++ demo/office-demo.template.html
+@@ -91,7 +91,32 @@
+ 
+ (async function main() {
+   const grid = SIM.buildGrid(DATA.walk);
+-  const router = SIM.makeRouter(grid);
++  // ---------- D5：目的地共享路由（多 agent 同帧冷算从 N 次压到 D 次） ----------
++  // 依据 tools/bench_d5_dedup.js：50 agent 每帧各自冷算 p95 12.11ms（73% 帧预算）；
++  // 按目的地分组做一次反向 BFS（树以 dest 为根，from 沿 parent 链走），p95 1.29ms（9.4x）。
++  const RHUB = (function () {
++    const trees = new Map();                 // destKey -> {dist,parent}
++    const LIMIT = 12;                        // 目的地树 LRU 上限，698 格 × 12 ≈ 可控
++    function treeFor(dest) {
++      const k = dest[0] + ',' + dest[1];
++      let t = trees.get(k);
++      if (t) return t;
++      t = SIM.bfs(grid, dest);
++      if (trees.size >= LIMIT) trees.delete(trees.keys().next().value);
++      trees.set(k, t);
++      return t;
++    }
++    function route(from, to) {
++      const t = treeFor(to);
++      const fk = from[0] + ',' + from[1];
++      if (!t.dist.has(fk)) return null;
++      const raw = [];
++      let cur = from;
++      while (cur) { raw.push(cur); cur = t.parent.get(cur[0] + ',' + cur[1]); }
++      return SIM.simplify(raw);              // 树根是 dest，方向天然 from -> dest
++    }
++    return { route: route, stats: function () { return { destructs: trees.size }; } };
++  })();
+   const zById = {};
+   DATA.zones.forEach(z => { zById[z.id] = z; });
+ 
+@@ -336,7 +361,7 @@
+   function route(a, b) {
+     const from = [Math.floor(a.x / T), Math.floor(a.y / T)];
+     const to = [Math.floor(b.x / T), Math.floor(b.y / T)];
+-    const p = router.simplified(from, to);
++    const p = RHUB.route(from, to);
+     return p ? p.map(pt) : null;
+   }
+   function chain(stops) {

@@ -1,0 +1,41 @@
+{
+  "name": "hashmai-agent-office",
+  "version": "0.8.0",
+  "private": false,
+  "description": "A pixel-style, single-page multi-agent office dashboard: boss -> ops center -> departments (<=3 seats each), built with PixiJS 8 and zero build dependencies.",
+  "keywords": [
+    "multi-agent",
+    "pixijs",
+    "dashboard",
+    "visualization",
+    "pixel-art",
+    "office",
+    "agents"
+  ],
+  "license": "MIT",
+  "author": "Hashmai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hashmai/hashmai-agent-office.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hashmai/hashmai-agent-office/issues"
+  },
+  "homepage": "https://github.com/hashmai/hashmai-agent-office#readme",
+  "files": [
+    "demo/",
+    "assets/",
+    "tools/",
+    "docs/"
+  ],
+  "scripts": {
+    "build": "python3 tools/build_office.py && python3 tools/build_seatmodel.py && python3 tools/build_tiles.py && python3 tools/build_sprites.py && python3 tools/build_demo.py && python3 tools/build_single_file.py",
+    "test": "node tools/test_sim.js && python3 tools/check_seat_ids.py --require-unified",
+    "serve": "python3 -m http.server 8080",
+    "bench": "node tools/bench_d5_dedup.js && node tools/bench_d5_routing.js"
+  },
+  "engines": {
+    "node": ">=18",
+    "python": ">=3.10"
+  }
+}

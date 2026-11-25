@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>哈希麦多agent办公室 · v0.1</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0e1116; overflow: hidden;
+    font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", sans-serif; }
+  #stage { position: absolute; inset: 0; }
+  #hud { position: absolute; left: 14px; top: 12px; color: #e7edf5; font-size: 12px;
+    line-height: 1.65; background: rgba(16,22,30,.82); border: 1px solid #2a3546;
+    border-radius: 8px; padding: 10px 12px; pointer-events: none; min-width: 178px; }
+  #hud b { font-size: 14px; letter-spacing: .4px; }
+  #hud .row { display: flex; justify-content: space-between; gap: 16px; }
+  #hud .k { color: #8fa3bd; }
+  #taskbar { position: absolute; right: 14px; top: 12px; color: #cfd9e6; font-size: 12px;
+    background: rgba(16,22,30,.82); border: 1px solid #2a3546; border-radius: 8px;
+    padding: 10px 12px; min-width: 210px; pointer-events: none; }
+  #taskbar .item { margin-top: 4px; color: #9fb2c9; }
+  #hint { position: absolute; left: 14px; bottom: 10px; color: #6b7d94; font-size: 11px; }
+  /* 任务生命周期流水条：同一件事从下达到回位的一条线（借机制，不搬数据墙皮） */
+  #pipe { position: absolute; left: 50%; bottom: 7px; transform: translateX(-50%);
+    display: flex; align-items: flex-start; gap: 8px;
+    background: rgba(16,22,30,.82); border: 1px solid #2a3546; border-radius: 10px;
+    padding: 6px 12px; color: #5d6b7d; font-size: 12px; letter-spacing: .5px; pointer-events: none;
+    transition: border-color .3s; max-width: 92vw; }
+  #pipe .prows { display: flex; flex-direction: column; gap: 3px; }
+  #pipe .prow { display: flex; align-items: center; gap: 6px; }
+  #pipe .prow[data-active="1"] .ptag { color: #cfd9e6; }
+  #pipe .ptag { width: 104px; color: #6b7d94; font-size: 11px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  #pipe i { display: block; width: 16px; height: 1px; background: #33404f; transition: background .3s; }
+  #pipe .pnode { padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; transition: all .3s; }
+  #pipe .pnode.on { color: #dfe9f5; border-color: #3d5068; background: rgba(61,80,104,.35); }
+  #pipe .pnode.now { color: #101820; background: #ffcc66; border-color: #ffcc66; }
+  #pipe i.on { background: #ffcc66; }
+  #pipe .plabel { color: #7f8fa3; margin-right: 6px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="hud">
+  <b>哈希麦多agent办公室</b> <span id="h-mode" style="color:#6b7d94;font-size:11px"></span><br>
+  <div class="row"><span class="k">在岗</span><span id="h-on">0</span></div>
+  <div class="row"><span class="k">工作中</span><span id="h-work">0</span></div>
+  <div class="row"><span class="k">走动/汇报</span><span id="h-move">0</span></div>
+  <div class="row"><span class="k">空工位</span><span id="h-empty">0</span></div>
+  <div class="row"><span class="k">缩放</span><span id="h-zoom">1.00</span></div>
+  <div class="row"><span class="k">LOD</span><span id="h-lod">场景层</span></div>
+</div>
+<div id="taskbar"><b>派单流</b><div id="tlist"></div></div>
+<div id="hint">滚轮缩放 · 拖拽平移 · 空格暂停 · 双击回到全图</div>
+<div id="pipe">
+  <span class="plabel" style="padding-top:2px">任务流水</span>
+  <div class="prows" id="prows"></div>
+</div>
+
+<script src="./lib/pixi.min.js"></script>
+<script src="./sim.js"></script>
+<script>
+window.onerror = function(m,s,l,c,e){ document.getElementById('hint').textContent = 'ERR '+m+' @'+l; };
+window.addEventListener('unhandledrejection', function(ev){ document.getElementById('hint').textContent = 'REJ '+String(ev.reason).slice(0,120); });
+const DATA = {"grid":{"w":53,"h":24,"tile_px":32},"walk":["00000000000000000000000000000000000000000000000000000","00000000000000000000000000000000000000000000000000000","00111111000111111111111111100011111111000111111111100","00111010000111111101010111100011111111000111111111100","00111111000111111111111111100011111111000111111111100","00111111000111111111111111100011111111000111111111100","00001000000000000010000000000000010000000000010000000","01111111111111111111111111111111111111111111111111110","01111111111111111111111111111111111111111111111111110","00000001000000000000000010000000000000000001000000000","00111111111111000111111111111111100011111111111111100","00111110101011000111111101010111100011111010101111100","00111111111111000111111111111111100011111111111111100","00111111111111000111111111111111100011111111111111100","00000001000000000000000010000000000000000001000000000","01111111111111111111111111111111111111111111111111110","01111111111111111111111111111111111111111111111111110","00000001000000000000000010000000000000000001000000000","00111111111111000111111111111111100011111111111111100","00111110101011000111111101010111100011111010101111100","00111111111111000111111111111111100011111111111111100","00111111111111000111111111111111100011111111111111100","00000000000000000000000000000000000000000000000000000","00000000000000000000000000000000000000000000000000000"],"corridors":[{"id":"corridor_a","rect":[1,7,51,8]},{"id":"corridor_b","rect":[1,15,51,16]}],"zones":[{"id":"boss_office","name":"老板办公室","role":"command","rect":[1,1,8,6],"interior":[2,2,7,5],"door":{"tile":[4,6],"zone_id":"boss_office"},"south_door":null,"headcount":2,"capacity":2,"seats":[{"seat_id":"boss_office-S00","zone_id":"boss_office","tile":[5,4],"facing":"up","desk_tile":[5,3],"assigned":false,"standby":false},{"seat_id":"boss_office-S01","zone_id":"boss_office","tile":[7,4],"facing":"up","desk_tile":[7,3],"assigned":false,"standby":false}]},{"id":"ops_center","name":"总经理运营中心","role":"dispatch","rect":[10,1,27,6],"interior":[11,2,26,5],"door":{"tile":[18,6],"zone_id":"ops_center"},"south_door":null,"headcount":3,"capacity":3,"seats":[{"seat_id":"ops_center-S00","zone_id":"ops_center","tile":[18,4],"facing":"up","desk_tile":[18,3],"assigned":false,"standby":false},{"seat_id":"ops_center-S01","zone_id":"ops_center","tile":[20,4],"facing":"up","desk_tile":[20,3],"assigned":false,"standby":false},{"seat_id":"ops_center-S02","zone_id":"ops_center","tile":[22,4],"facing":"up","desk_tile":[22,3],"assigned":false,"standby":false}]},{"id":"meeting","name":"会议室","role":"facility","rect":[29,1,38,6],"interior":[30,2,37,5],"door":{"tile":[33,6],"zone_id":"meeting"},"south_door":null,"headcount":0,"capacity":0,"seats":[]},{"id":"pantry","name":"茶水间","role":"facility","rect":[40,1,51,6],"interior":[41,2,50,5],"door":{"tile":[45,6],"zone_id":"pantry"},"south_door":null,"headcount":0,"capacity":0,"seats":[]},{"id":"tech","name":"技术部","role":"function","rect":[1,9,14,14],"interior":[2,10,13,13],"door":{"tile":[7,9],"zone_id":"tech"},"south_door":{"tile":[7,14],"zone_id":"tech"},"headcount":3,"capacity":3,"seats":[{"seat_id":"tech-S00","zone_id":"tech","tile":[7,12],"facing":"up","desk_tile":[7,11],"assigned":false,"standby":false},{"seat_id":"tech-S01","zone_id":"tech","tile":[9,12],"facing":"up","desk_tile":[9,11],"assigned":false,"standby":false},{"seat_id":"tech-S02","zone_id":"tech","tile":[11,12],"facing":"up","desk_tile":[11,11],"assigned":false,"standby":false}]},{"id":"data","name":"数据部","role":"function","rect":[16,9,33,14],"interior":[17,10,32,13],"door":{"tile":[24,9],"zone_id":"data"},"south_door":{"tile":[24,14],"zone_id":"data"},"headcount":3,"capacity":3,"seats":[{"seat_id":"data-S00","zone_id":"data","tile":[24,12],"facing":"up","desk_tile":[24,11],"assigned":false,"standby":false},{"seat_id":"data-S01","zone_id":"data","tile":[26,12],"facing":"up","desk_tile":[26,11],"assigned":false,"standby":false},{"seat_id":"data-S02","zone_id":"data","tile":[28,12],"facing":"up","desk_tile":[28,11],"assigned":false,"standby":false}]},{"id":"ui","name":"设计部","role":"function","rect":[35,9,51,14],"interior":[36,10,50,13],"door":{"tile":[43,9],"zone_id":"ui"},"south_door":{"tile":[43,14],"zone_id":"ui"},"headcount":3,"capacity":3,"seats":[{"seat_id":"ui-S00","zone_id":"ui","tile":[41,12],"facing":"up","desk_tile":[41,11],"assigned":false,"standby":false},{"seat_id":"ui-S01","zone_id":"ui","tile":[43,12],"facing":"up","desk_tile":[43,11],"assigned":false,"standby":false},{"seat_id":"ui-S02","zone_id":"ui","tile":[45,12],"facing":"up","desk_tile":[45,11],"assigned":false,"standby":false}]},{"id":"hr","name":"人力资源","role":"function","rect":[1,17,14,22],"interior":[2,18,13,21],"door":{"tile":[7,17],"zone_id":"hr"},"south_door":null,"headcount":3,"capacity":3,"seats":[{"seat_id":"hr-S00","zone_id":"hr","tile":[7,20],"facing":"up","desk_tile":[7,19],"assigned":false,"standby":false},{"seat_id":"hr-S01","zone_id":"hr","tile":[9,20],"facing":"up","desk_tile":[9,19],"assigned":false,"standby":false},{"seat_id":"hr-S02","zone_id":"hr","tile":[11,20],"facing":"up","desk_tile":[11,19],"assigned":false,"standby":false}]},{"id":"finance","name":"财务部","role":"function","rect":[16,17,33,22],"interior":[17,18,32,21],"door":{"tile":[24,17],"zone_id":"finance"},"south_door":null,"headcount":3,"capacity":3,"seats":[{"seat_id":"finance-S00","zone_id":"finance","tile":[24,20],"facing":"up","desk_tile":[24,19],"assigned":false,"standby":false},{"seat_id":"finance-S01","zone_id":"finance","tile":[26,20],"facing":"up","desk_tile":[26,19],"assigned":false,"standby":false},{"seat_id":"finance-S02","zone_id":"finance","tile":[28,20],"facing":"up","desk_tile":[28,19],"assigned":false,"standby":false}]},{"id":"qa_lab","name":"验证实验室","role":"function","rect":[35,17,51,22],"interior":[36,18,50,21],"door":{"tile":[43,17],"zone_id":"qa_lab"},"south_door":null,"headcount":3,"capacity":3,"seats":[{"seat_id":"qa_lab-S00","zone_id":"qa_lab","tile":[41,20],"facing":"up","desk_tile":[41,19],"assigned":false,"standby":false},{"seat_id":"qa_lab-S01","zone_id":"qa_lab","tile":[43,20],"facing":"up","desk_tile":[43,19],"assigned":false,"standby":false},{"seat_id":"qa_lab-S02","zone_id":"qa_lab","tile":[45,20],"facing":"up","desk_tile":[45,19],"assigned":false,"standby":false}]}]};
+const TMAP = {"type":"map","version":"1.10","tiledversion":"1.11.0","orientation":"orthogonal","renderorder":"right-down","width":53,"height":24,"tilewidth":32,"tileheight":32,"infinite":false,"nextlayerid":5,"nextobjectid":34,"layers":[{"id":1,"name":"floor","type":"tilelayer","width":53,"height":24,"opacity":1,"visible":true,"data":[10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,10,10,3,7,7,7,7,7,7,3,10,3,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,3,10,3,1,1,1,1,1,1,1,1,3,10,3,1,1,1,1,1,1,1,1,1,1,3,10,10,3,7,7,7,7,7,7,3,10,3,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,3,10,3,1,1,1,1,1,1,1,1,3,10,3,1,1,1,1,1,1,1,1,1,1,3,10,10,3,7,7,7,7,7,7,3,10,3,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,3,10,3,1,1,1,1,1,1,1,1,3,10,3,1,1,1,1,1,1,1,1,1,1,3,10,10,3,7,7,7,7,7,7,3,10,3,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,3,10,3,1,1,1,1,1,1,1,1,3,10,3,1,1,1,1,1,1,1,1,1,1,3,10,10,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,10,10,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,10,10,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,10,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,10,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,10,10,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,10,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,3,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,3,10,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10]},{"id":2,"name":"furniture","type":"tilelayer","width":53,"height":24,"opacity":1,"visible":true,"data":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,4,0,0,0,0,0,0,0,0,0,0,4,0,4,0,4,0,0,0,0,0,0,0,0,11,11,11,11,11,11,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,5,0,0,0,0,0,0,0,0,0,0,5,0,5,0,5,0,0,0,0,0,0,0,0,11,11,11,11,11,11,0,0,0,0,0,12,12,12,12,12,12,12,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,12,12,12,12,12,12,12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,4,0,4,0,0,0,0,0,0,0,0,0,0,0,0,4,0,4,0,4,0,0,0,0,0,0,0,0,0,0,0,0,4,0,4,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,5,0,5,0,0,0,0,0,0,0,0,0,0,0,0,5,0,5,0,5,0,0,0,0,0,0,0,0,0,0,0,0,5,0,5,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,4,0,4,0,0,0,0,0,0,0,0,0,0,0,0,4,0,4,0,4,0,0,0,0,0,0,0,0,0,0,0,0,4,0,4,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,0,5,0,5,0,0,0,0,0,0,0,0,0,0,0,0,5,0,5,0,5,0,0,0,0,0,0,0,0,0,0,0,0,5,0,5,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"id":3,"name":"props","type":"tilelayer","width":53,"height":24,"opacity":1,"visible":true,"data":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"id":4,"name":"objects","type":"objectgroup","opacity":1,"visible":true,"draworder":"index","objects":[{"id":1,"name":"boss_office","type":"zone","x":32,"y":32,"width":256,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"command"},{"name":"headcount","type":"int","value":2},{"name":"display_name","type":"string","value":"老板办公室"}]},{"id":2,"name":"ops_center","type":"zone","x":320,"y":32,"width":576,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"dispatch"},{"name":"headcount","type":"int","value":3},{"name":"display_name","type":"string","value":"总经理运营中心"}]},{"id":3,"name":"meeting","type":"zone","x":928,"y":32,"width":320,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"facility"},{"name":"headcount","type":"int","value":0},{"name":"display_name","type":"string","value":"会议室"}]},{"id":4,"name":"pantry","type":"zone","x":1280,"y":32,"width":384,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"facility"},{"name":"headcount","type":"int","value":0},{"name":"display_name","type":"string","value":"茶水间"}]},{"id":5,"name":"tech","type":"zone","x":32,"y":288,"width":448,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"function"},{"name":"headcount","type":"int","value":3},{"name":"display_name","type":"string","value":"技术部"}]},{"id":6,"name":"data","type":"zone","x":512,"y":288,"width":576,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"function"},{"name":"headcount","type":"int","value":3},{"name":"display_name","type":"string","value":"数据部"}]},{"id":7,"name":"ui","type":"zone","x":1120,"y":288,"width":544,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"function"},{"name":"headcount","type":"int","value":3},{"name":"display_name","type":"string","value":"设计部"}]},{"id":8,"name":"hr","type":"zone","x":32,"y":544,"width":448,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"function"},{"name":"headcount","type":"int","value":3},{"name":"display_name","type":"string","value":"人力资源"}]},{"id":9,"name":"finance","type":"zone","x":512,"y":544,"width":576,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"function"},{"name":"headcount","type":"int","value":3},{"name":"display_name","type":"string","value":"财务部"}]},{"id":10,"name":"qa_lab","type":"zone","x":1120,"y":544,"width":544,"height":192,"rotation":0,"visible":true,"properties":[{"name":"role","type":"string","value":"function"},{"name":"headcount","type":"int","value":3},{"name":"display_name","type":"string","value":"验证实验室"}]},{"id":11,"name":"boss_office-S00","type":"seat","x":176,"y":144,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"boss_office"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":12,"name":"boss_office-S01","type":"seat","x":240,"y":144,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"boss_office"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":13,"name":"ops_center-S00","type":"seat","x":592,"y":144,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"ops_center"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":14,"name":"ops_center-S01","type":"seat","x":656,"y":144,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"ops_center"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":15,"name":"ops_center-S02","type":"seat","x":720,"y":144,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"ops_center"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":16,"name":"tech-S00","type":"seat","x":240,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"tech"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":17,"name":"tech-S01","type":"seat","x":304,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"tech"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":18,"name":"tech-S02","type":"seat","x":368,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"tech"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":19,"name":"data-S00","type":"seat","x":784,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"data"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":20,"name":"data-S01","type":"seat","x":848,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"data"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":21,"name":"data-S02","type":"seat","x":912,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"data"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":22,"name":"ui-S00","type":"seat","x":1328,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"ui"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":23,"name":"ui-S01","type":"seat","x":1392,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"ui"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":24,"name":"ui-S02","type":"seat","x":1456,"y":400,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"ui"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":25,"name":"hr-S00","type":"seat","x":240,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"hr"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":26,"name":"hr-S01","type":"seat","x":304,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"hr"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":27,"name":"hr-S02","type":"seat","x":368,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"hr"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":28,"name":"finance-S00","type":"seat","x":784,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"finance"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":29,"name":"finance-S01","type":"seat","x":848,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"finance"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":30,"name":"finance-S02","type":"seat","x":912,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"finance"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":31,"name":"qa_lab-S00","type":"seat","x":1328,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"qa_lab"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":32,"name":"qa_lab-S01","type":"seat","x":1392,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"qa_lab"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]},{"id":33,"name":"qa_lab-S02","type":"seat","x":1456,"y":656,"width":0,"height":0,"rotation":0,"visible":true,"properties":[{"name":"zone_id","type":"string","value":"qa_lab"},{"name":"facing","type":"string","value":"up"},{"name":"standby","type":"bool","value":false}]}]}],"tilesets":[{"firstgid":1,"name":"office-tileset","image":"office-tileset.png","imagewidth":128,"imageheight":128,"tilewidth":32,"tileheight":32,"tilecount":16,"columns":4,"margin":0,"spacing":0}]};
+let TILES_OK = false;
+const TILES_IMG = new Image();
+TILES_IMG.onload = () => { TILES_OK = !!(TMAP && TMAP.layers); };
+TILES_IMG.onerror = () => { TILES_OK = false; };
+TILES_IMG.src = '../assets/office-tileset.png';
+let SPR_OK = false;
+const SPR_IMG = new Image();
+const SPR = { cw: 32, ch: 48, cols: 9, rows: 8 };   // 3 配色 × 3 帧 / 4 朝向 × 2 状态
+SPR_IMG.onload = () => { SPR_OK = true; };
+SPR_IMG.onerror = () => { SPR_OK = false; };
+SPR_IMG.src = '../assets/agents.png';
+const PAL_OF = { tech: 0, ops: 1, staff: 2 };
+function paletteOf(zoneId) {
+  if (/tech|qa/.test(zoneId)) return PAL_OF.tech;
+  if (/ops|boss|meeting/.test(zoneId)) return PAL_OF.ops;
+  return PAL_OF.staff;
+}
+const SIM = window.ROOST_SIM;
+const T = DATA.grid.tile_px;
+const W = DATA.grid.w, H = DATA.grid.h;
+const ROLE_COLOR = { command: 0x382d1c, dispatch: 0x1c2a38, function: 0x1d2b24, facility: 0x23252a };
+const ACCENT = { boss_office: 0xffcc66, ops_center: 0x66aaff, tech: 0x57c785, data: 0x6fa8dc,
+                 ui: 0xd48ee8, hr: 0xf2a76b, finance: 0x8fd3c7, qa_lab: 0xb6c76a,
+                 meeting: 0x8a93a3, pantry: 0x8a93a3 };
+const STATE_COLOR = { idle: 0x6b7f96, working: 0x57c785, moving: 0xe0b25d,
+                      reporting: 0x66aaff, blocked: 0xd9534f };
+function hex(n) { return '#' + ('000000' + n.toString(16)).slice(-6); }
+
+(async function main() {
+  const grid = SIM.buildGrid(DATA.walk);
+  // ---------- D5：目的地共享路由（多 agent 同帧冷算从 N 次压到 D 次） ----------
+  // 依据 tools/bench_d5_dedup.js：50 agent 每帧各自冷算 p95 12.11ms（73% 帧预算）；
+  // 按目的地分组做一次反向 BFS（树以 dest 为根，from 沿 parent 链走），p95 1.29ms（9.4x）。
+  const RHUB = (function () {
+    const trees = new Map();                 // destKey -> {dist,parent}
+    const LIMIT = 12;                        // 目的地树 LRU 上限，698 格 × 12 ≈ 可控
+    function treeFor(dest) {
+      const k = dest[0] + ',' + dest[1];
+      let t = trees.get(k);
+      if (t) return t;
+      t = SIM.bfs(grid, dest);
+      if (trees.size >= LIMIT) trees.delete(trees.keys().next().value);
+      trees.set(k, t);
+      return t;
+    }
+    function route(from, to) {
+      const t = treeFor(to);
+      const fk = from[0] + ',' + from[1];
+      if (!t.dist.has(fk)) return null;
+      const raw = [];
+      let cur = from;
+      while (cur) { raw.push(cur); cur = t.parent.get(cur[0] + ',' + cur[1]); }
+      return SIM.simplify(raw);              // 树根是 dest，方向天然 from -> dest
+    }
+    return { route: route, stats: function () { return { destructs: trees.size }; } };
+  })();
+  const zById = {};
+  DATA.zones.forEach(z => { zById[z.id] = z; });
+
+  // ---------- 双模式：Pixi(WebGL) 优先，失败降级 Canvas2D ----------
+  // ?force2d=1：强制走 Canvas2D 降级路径（DS 要验降级分支，不能只有 Pixi 挂了才进得去）
+  const FORCE2D = new URLSearchParams(location.search).get('force2d') === '1';
+  let MODE = FORCE2D ? '2d' : 'pixi';
+  let app = null, world = null;
+  const layers = {};
+  let zoneMeters = null, zoneMeterTxt = null;
+  let canvas = null, ctx2d = null;
+  function init2dCanvas() {
+    MODE = '2d';
+    canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+    document.getElementById('stage').appendChild(canvas);
+    ctx2d = canvas.getContext('2d');
+  }
+  window.__forced2d = FORCE2D;
+  if (FORCE2D) { window.__pixiErr = null; init2dCanvas(); }
+  else try {
+    app = new PIXI.Application();
+    await app.init({ background: '#0e1116', resizeTo: window, antialias: false,
+                     resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true,
+                     // 仅自检模式保留绘图缓冲，才能按屏幕坐标取样像素（生产路径不开，避免多余拷贝）
+                     preserveDrawingBuffer: new URLSearchParams(location.search).get('selfcheck') === '1' });
+    document.getElementById('stage').appendChild(app.canvas);
+    canvas = app.canvas;
+    world = new PIXI.Container();
+    app.stage.addChild(world);
+    ['floor', 'link', 'desk', 'agent', 'label', 'fx'].forEach(k => {
+      layers[k] = new PIXI.Container();
+      world.addChild(layers[k]);
+    });
+  } catch (e) {
+    window.__pixiErr = String((e && e.message) || e) + (typeof PIXI === 'undefined' ? ' | PIXI-lib-not-loaded' : '');
+    init2dCanvas();
+  }
+  document.getElementById('h-mode').textContent = MODE === 'pixi' ? 'WebGL' : 'Canvas2D · 无WebGL降级';
+  if (MODE === 'pixi' || FORCE2D) {
+    const loadP = img => new Promise(r => {
+      if (img.complete && img.naturalWidth) { r(); return; }
+      img.addEventListener('load', r, { once: true });
+      img.addEventListener('error', r, { once: true });
+    });
+    await Promise.all([loadP(TILES_IMG), loadP(SPR_IMG)]);
+  }
+  canvas.style.touchAction = 'none';
+
+  function resizeCanvas() {
+    if (MODE !== '2d') return;
+    const r = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(window.innerWidth * r);
+    canvas.height = Math.floor(window.innerHeight * r);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', () => { resizeCanvas(); if (MODE === '2d') fit(); });
+
+  // ---------- 摄像机 ----------
+  let zoom = 1, camX = 0, camY = 0;
+  function viewW() { return MODE === '2d' ? canvas.width / Math.min(2, window.devicePixelRatio || 1) : app.renderer.width / (app.renderer.resolution || 1); }
+  function viewH() { return MODE === '2d' ? canvas.height / Math.min(2, window.devicePixelRatio || 1) : app.renderer.height / (app.renderer.resolution || 1); }
+  const MARGIN = { top: 178, bottom: 40, left: 10, right: 10 };
+  function fit() {
+    const w = viewW(), h = viewH();
+    const aw = w - MARGIN.left - MARGIN.right;
+    const ah = h - MARGIN.top - MARGIN.bottom;
+    zoom = Math.min(aw / (W * T), ah / (H * T));
+    camX = MARGIN.left + (aw - W * T * zoom) / 2;
+    camY = MARGIN.top + (ah - H * T * zoom) / 2;
+    apply();
+  }
+  function apply() {
+    if (MODE === 'pixi') { world.scale.set(zoom); world.x = camX; world.y = camY; }
+    if (MODE === 'pixi') {
+      layers.desk.visible = zoom >= 0.45;
+      agents.forEach(a => { if (a.label && a.label.visible !== undefined) a.label.visible = zoom >= 0.75; });
+    }
+    document.getElementById('h-lod').textContent = zoom >= 0.75 ? '场景层' : (zoom >= 0.4 ? '过渡带' : '鸟瞰层');
+    document.getElementById('h-zoom').textContent = zoom.toFixed(2);
+  }
+
+  canvas.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const wx = (mx - camX) / zoom, wy = (my - camY) / zoom;
+    const nz = Math.max(0.3, Math.min(2.4, zoom * Math.exp(-e.deltaY * 0.0016)));
+    camX = mx - wx * nz; camY = my - wy * nz; zoom = nz; apply();
+  }, { passive: false });
+
+  let drag = null;
+  canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, cx: camX, cy: camY }; });
+  window.addEventListener('pointerup', () => { drag = null; });
+  window.addEventListener('pointermove', e => {
+    if (!drag) return;
+    camX = drag.cx + (e.clientX - drag.x); camY = drag.cy + (e.clientY - drag.y); apply();
+  });
+  canvas.addEventListener('dblclick', fit);
+  window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); st.paused = !st.paused; } });
+
+  // ---------- 地面 / 桌子 ----------
+  const seatTotal = DATA.zones.reduce((s, z) => s + z.seats.length, 0);
+  function fillRect(g, x0, y0, x1, y1, color, alpha) {
+    g.rect(x0 * T, y0 * T, (x1 - x0 + 1) * T, (y1 - y0 + 1) * T)
+     .fill({ color: color, alpha: alpha === undefined ? 1 : alpha });
+  }
+
+  if (MODE === 'pixi') {
+    const floor = new PIXI.Graphics();
+    DATA.corridors.forEach(c => fillRect(floor, c.rect[0], c.rect[1], c.rect[2], c.rect[3], 0x161a21));
+    DATA.zones.forEach(z => {
+      const r = z.rect;
+      fillRect(floor, r[0] + 1, r[1] + 1, r[2] - 1, r[3] - 1, ROLE_COLOR[z.role] || 0x1d2b24);
+      floor.rect(r[0] * T, r[1] * T, (r[2] - r[0] + 1) * T, T).fill({ color: 0x2b3444 });
+      floor.rect(r[0] * T, r[3] * T, (r[2] - r[0] + 1) * T, T).fill({ color: 0x2b3444 });
+      floor.rect(r[0] * T, r[1] * T, T, (r[3] - r[1] + 1) * T).fill({ color: 0x2b3444 });
+      floor.rect(r[2] * T, r[1] * T, T, (r[3] - r[1] + 1) * T).fill({ color: 0x2b3444 });
+      floor.rect(z.door.tile[0] * T, z.door.tile[1] * T, T, T).fill({ color: 0x2a3547 });
+    });
+    layers.floor.addChild(floor);
+
+    const deskG = new PIXI.Graphics();
+    DATA.zones.forEach(z => z.seats.forEach(s => {
+      const d = s.desk_tile, p = s.tile;
+      deskG.rect(d[0] * T + 5, d[1] * T + 5, T - 10, T - 12).fill({ color: 0x2f3b4a });
+      deskG.rect(d[0] * T + 9, d[1] * T + 9, T - 18, 8).fill({ color: 0x54657c });
+      deskG.rect(p[0] * T + 9, p[1] * T + 15, T - 18, T - 20).fill({ color: 0x263341 });
+    }));
+    layers.desk.addChild(deskG);
+
+    DATA.zones.forEach(z => {
+      const t = new PIXI.Text({ text: z.name + (z.headcount ? ' · ' + z.headcount + '人' : ''),
+        style: { fontFamily: 'PingFang SC', fontSize: 15, fill: ACCENT[z.id] || 0xffffff, fontWeight: '600' } });
+      t.x = (z.rect[0] + 1) * T + 5; t.y = (z.rect[1] + 1) * T + 4;
+      layers.label.addChild(t);
+    });
+    // 每场景自带状态点 + 迷你占用条（借机制：状态点/微趋势；语义仍是办公室的在岗-走动-工作）
+    zoneMeters = {};
+    DATA.zones.forEach(z => {
+      const g = new PIXI.Graphics();
+      g.x = (z.rect[0] + 1) * T + 6;
+      g.y = (z.rect[1] + 1) * T + 26;
+      layers.label.addChild(g);
+      zoneMeters[z.id] = g;
+    });
+    zoneMeterTxt = {};
+    DATA.zones.forEach(z => {
+      const t2 = new PIXI.Text({ text: '0/0', style: { fontFamily: 'PingFang SC', fontSize: 10, fill: 0x8fa3bd } });
+      t2.x = (z.rect[0] + 1) * T + 52;
+      t2.y = (z.rect[1] + 1) * T + 22;
+      layers.label.addChild(t2);
+      zoneMeterTxt[z.id] = t2;
+    });
+
+    // 图块地图（与 Canvas2D 同一份 .tmj / tileset，保证两条路径同源）
+    if (TILES_OK && TMAP && TMAP.layers) {
+      const cols = TMAP.tilesets[0].columns;
+      const base = PIXI.Texture.from(TILES_IMG);
+      const texCache = {};
+      const texOf = gid => {
+        if (!texCache[gid]) {
+          const idx = gid - 1;
+          texCache[gid] = new PIXI.Texture({ source: base.source,
+            frame: new PIXI.Rectangle((idx % cols) * T, Math.floor(idx / cols) * T, T, T) });
+        }
+        return texCache[gid];
+      };
+      const tiles = new PIXI.Container();
+      TMAP.layers.forEach(layer => {
+        if (layer.type !== 'tilelayer' || !layer.data) return;
+        const wT = layer.width;
+        for (let i = 0; i < layer.data.length; i++) {
+          const gid = layer.data[i];
+          if (!gid || gid === 10) continue;      // 10=建筑外
+          const sp = new PIXI.Sprite(texOf(gid));
+          sp.x = (i % wT) * T; sp.y = Math.floor(i / wT) * T;
+          sp.width = T; sp.height = T;
+          tiles.addChild(sp);
+        }
+      });
+      layers.floor.addChild(tiles);
+    }
+  }
+
+  // ---------- agents ----------
+  const agents = [];
+  DATA.zones.forEach(z => {
+    if (z.role === 'facility') return;
+    z.seats.forEach((s, i) => {
+      if (i >= z.headcount) return;
+      const x = s.tile[0] * T + T / 2, y = s.tile[1] * T + T / 2;
+      const a = { id: z.id + '-A' + i, zone_id: z.id, seat: s, state: 'idle', busy: false, x: x, y: y,
+                  ph: (agents.length + 1) * 1.7 };
+      if (MODE === 'pixi') {
+        const c = new PIXI.Container();
+        const body = new PIXI.Graphics();
+        body.roundRect(-8, -11, 16, 19, 4).fill({ color: 0x5b6b80 });
+        body.circle(0, -13, 5).fill({ color: 0xc9a883 });
+        const cap = new PIXI.Graphics();
+        cap.circle(0, -25, 3).fill({ color: 0x57c785 });
+        const label = new PIXI.Text({ text: z.name.slice(0, 2) + '-S' + (s.seat_id.split('-S')[1] || String(i).padStart(2, '0')),
+          style: { fontFamily: 'PingFang SC', fontSize: 11, fill: 0xa8b8cc } });
+        label.anchor.set(0.5, 1); label.y = -28;
+        let spr = null;
+        if (SPR_OK) {
+          spr = new PIXI.Sprite();
+          spr.anchor.set(0.5, 1);
+          spr.y = 12; spr.width = 26; spr.height = 39;
+          body.visible = false; cap.visible = false;
+          c.addChild(spr);
+        }
+        c.addChild(body, cap, label);
+        c.x = x; c.y = y;
+        layers.agent.addChild(c);
+        a.c = c; a.body = body; a.cap = cap; a.label = label; a.sprite = spr;
+      } else {
+        a.c = a;
+        a.label = { text: z.name.slice(0, 2) + '-S' + (s.seat_id.split('-S')[1] || String(i).padStart(2, '0')) };
+      }
+      agents.push(a);
+    });
+  });
+  function paint(a) {
+    const col = STATE_COLOR[a.state] || 0x6b7f96;
+    if (MODE === 'pixi') {
+      a.body.tint = col; a.cap.tint = col;
+      if (a.sprite) { a.sprite.tint = 0xffffff; }
+    }
+    else a.color = hex(col);
+  }
+  agents.forEach(paint);
+
+  // ---------- 路径 ----------
+  function pt(tile) { return { x: tile[0] * T + T / 2, y: tile[1] * T + T / 2 }; }
+  function doorPt(z) { return pt(z.door.tile); }
+  function seatPt(a) { return pt(a.seat.tile); }
+  const boss = zById['boss_office'], ops = zById['ops_center'];
+  const bossSeat = pt(boss.seats[0].tile);
+  const gmSeat = pt(ops.seats[0].tile);
+
+  function route(a, b) {
+    const from = [Math.floor(a.x / T), Math.floor(a.y / T)];
+    const to = [Math.floor(b.x / T), Math.floor(b.y / T)];
+    const p = RHUB.route(from, to);
+    return p ? p.map(pt) : null;
+  }
+  function chain(stops) {
+    let out = [];
+    for (let i = 1; i < stops.length; i++) {
+      const seg = route(stops[i - 1], stops[i]);
+      if (!seg) return null;
+      out = out.concat(i === 1 ? seg : seg.slice(1));
+    }
+    return out;
+  }
+
+  // ---------- 时钟 ----------
+  const st = { paused: false, movers: [], timers: [], clock: 0 };
+  function sleep(ms) { return new Promise(res => st.timers.push({ left: ms, res: res })); }
+  function moveTo(target, points, speed) {
+    return new Promise(res => {
+      if (!points || points.length < 2) { res(); return; }
+      st.movers.push({ t: target, pts: points, i: 0, seg: 0, speed: speed, done: false, res: res });
+    });
+  }
+  function tickMotion(dt) {
+    st.clock += dt;
+    st.timers = st.timers.filter(t => { t.left -= dt * 1000; if (t.left <= 0) { t.res(); return false; } return true; });
+    st.movers.forEach(m => {
+      if (m.done) return;
+      let budget = m.speed * dt;
+      while (budget > 0 && m.i < m.pts.length - 1) {
+        const a = m.pts[m.i], b = m.pts[m.i + 1];
+        const len = Math.hypot(b.x - a.x, b.y - a.y);
+        const rest = len - m.seg;
+        if (budget < rest) { m.seg += budget; budget = 0; }
+        else { budget -= rest; m.seg = 0; m.i++; }
+        const aa = m.pts[m.i], bb = m.pts[Math.min(m.i + 1, m.pts.length - 1)];
+        const l = Math.max(1e-6, Math.hypot(bb.x - aa.x, bb.y - aa.y));
+        m.t.x = aa.x + (bb.x - aa.x) * (m.seg / l);
+        m.t.y = aa.y + (bb.y - aa.y) * (m.seg / l);
+      }
+      if (m.i >= m.pts.length - 1) {
+        const last = m.pts[m.pts.length - 1];
+        m.t.x = last.x; m.t.y = last.y; m.done = true; m.res();
+      }
+    });
+    st.movers = st.movers.filter(m => !m.done);
+  }
+
+  // ---------- 气泡 ----------
+  const bubbles = [];
+  function bubble(text, color) {
+    const c = color || 0xffcc66;
+    if (MODE === 'pixi') {
+      const cont = new PIXI.Container();
+      const g = new PIXI.Graphics();
+      g.roundRect(-26, -12, 52, 24, 6).fill({ color: c, alpha: .95 });
+      const t = new PIXI.Text({ text: text, style: { fontFamily: 'PingFang SC', fontSize: 12, fill: 0x101820, fontWeight: '600' } });
+      t.anchor.set(0.5, 0.5);
+      cont.addChild(g, t);
+      layers.fx.addChild(cont);
+      return cont;
+    }
+    const b = { x: 0, y: 0, text: text, color: hex(c) };
+    bubbles.push(b);
+    return b;
+  }
+  function killBubble(b) {
+    if (MODE === 'pixi' && b && b.destroy) b.destroy();
+    else { const i = bubbles.indexOf(b); if (i >= 0) bubbles.splice(i, 1); }
+  }
+
+  // ---------- 流转连线（只借机制不搬皮）：一单一条线，dispatch 起、report 止 ----------
+  // 一条任务流 = 一条累积折线 + 一个光点；颜色随阶段转（金→蓝→绿），光点每阶段只走一趟，
+  // 走到该段终点就停住（不再 %1 循环），所以两单并行就是两个点，数量可读。
+  const flows = [];
+  let flowG = null;
+  if (MODE === 'pixi') { flowG = new PIXI.Graphics(); layers.fx.addChild(flowG); }
+  function polyLen(pts) {
+    let t = 0;
+    for (let i = 1; i < pts.length; i++) t += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    return t;
+  }
+  function polyAt(pts, s) {
+    let acc = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      const l = Math.hypot(b.x - a.x, b.y - a.y);
+      if (acc + l >= s || i === pts.length - 1) {
+        const k = l > 1e-6 ? Math.min(1, Math.max(0, (s - acc) / l)) : 0;
+        return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+      }
+      acc += l;
+    }
+    return pts[pts.length - 1];
+  }
+  function newFlow(color) {
+    const f = { pts: [], color: color, dot: null };
+    flows.push(f);
+    return f;
+  }
+  // 把新一段接到这条任务线尾部；光点从接缝处出发，用 speed 折算走这一段的时长，走完停在段尾
+  function flowExtend(f, pts, color, speed) {
+    if (!f || !pts || pts.length < 2) return;
+    const sp = speed || 220;
+    const s0 = polyLen(f.pts);
+    if (!f.pts.length) {
+      f.pts = pts.map(p => ({ x: p.x, y: p.y }));
+    } else {
+      const last = f.pts[f.pts.length - 1];
+      const skip = (Math.abs(pts[0].x - last.x) < 1e-6 && Math.abs(pts[0].y - last.y) < 1e-6) ? 1 : 0;
+      for (let i = skip; i < pts.length; i++) f.pts.push({ x: pts[i].x, y: pts[i].y });
+    }
+    f.color = color;
+    const s1 = polyLen(f.pts);
+    f.dot = { from: s0, to: s1, t0: (st.clock || 0), dur: Math.max(0.2, (s1 - s0) / sp) };
+  }
+  function dropFlow(f) { const i = flows.indexOf(f); if (i >= 0) flows.splice(i, 1); }
+  function flowDotS(f, CLK) {
+    if (!f.dot) return 0;
+    const k = f.dot.dur > 0 ? Math.min(1, Math.max(0, (CLK - f.dot.t0) / f.dot.dur)) : 1;
+    return f.dot.from + (f.dot.to - f.dot.from) * k;
+  }
+  function drawFlows() {
+    if (!flowG) return;
+    flowG.clear();
+    const CLK = st.clock || 0;
+    flows.forEach(f => {
+      const pts = f.pts;
+      if (pts.length < 2) return;
+      flowG.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) flowG.lineTo(pts[i].x, pts[i].y);
+      flowG.stroke({ width: 2.4, color: f.color, alpha: 0.5 });
+      const q = polyAt(pts, Math.min(polyLen(pts), flowDotS(f, CLK)));
+      // 一单一点：小圆用三层画（光晕/描边/实心），停在工位时也数得清
+      flowG.circle(q.x, q.y, 9).fill({ color: f.color, alpha: 0.20 });
+      flowG.circle(q.x, q.y, 5.4).stroke({ width: 1.4, color: f.color, alpha: 0.8 });
+      flowG.circle(q.x, q.y, 3.2).fill({ color: f.color, alpha: 1 });
+    });
+  }
+  // 降级路径不能丢功能：Canvas2D 里同一份 flows 用 ctx2d 画（线 + 一单一点）
+  function drawFlows2d() {
+    if (!ctx2d) return;
+    const CLK = st.clock || 0;
+    ctx2d.lineJoin = 'round';
+    flows.forEach(f => {
+      const pts = f.pts;
+      if (pts.length < 2) return;
+      ctx2d.globalAlpha = 0.5;
+      ctx2d.lineWidth = 2.4;
+      ctx2d.strokeStyle = hex(f.color);
+      ctx2d.beginPath();
+      ctx2d.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx2d.lineTo(pts[i].x, pts[i].y);
+      ctx2d.stroke();
+      const q = polyAt(pts, Math.min(polyLen(pts), flowDotS(f, CLK)));
+      ctx2d.fillStyle = hex(f.color);
+      ctx2d.globalAlpha = 0.20;
+      ctx2d.beginPath(); ctx2d.arc(q.x, q.y, 9, 0, Math.PI * 2); ctx2d.fill();
+      ctx2d.globalAlpha = 0.8;
+      ctx2d.beginPath(); ctx2d.arc(q.x, q.y, 5.4, 0, Math.PI * 2); ctx2d.lineWidth = 1.4; ctx2d.stroke();
+      ctx2d.globalAlpha = 1;
+      ctx2d.beginPath(); ctx2d.arc(q.x, q.y, 3.2, 0, Math.PI * 2); ctx2d.fill();
+    });
+  }
+  // 底部生命周期流水条（DOM，不进画布取样，不影响 D6）
+  // 一单一行：并发时各单各自推进，不再互相覆盖；行数=活跃单数（上限 4）。
+  const PIPE_STAGES = ['01 下发', '02 拆单', '03 执行', '04 汇报', '05 回位'];
+  const PROWS = [];
+  function pipeOpen(label) {
+    const rows = document.getElementById('prows');
+    const el = document.createElement('div');
+    el.className = 'prow'; el.dataset.active = '1';
+    const tag = document.createElement('span');
+    tag.className = 'ptag'; tag.textContent = label;
+    el.appendChild(tag);
+    const nodes = [], links = [];
+    PIPE_STAGES.forEach((name, idx) => {
+      const n = document.createElement('span');
+      n.className = 'pnode'; n.textContent = name;
+      el.appendChild(n); nodes.push(n);
+      if (idx < PIPE_STAGES.length - 1) {
+        const bar = document.createElement('i');
+        el.appendChild(bar); links.push(bar);
+      }
+    });
+    rows.appendChild(el);
+    const row = { el: el, nodes: nodes, links: links };
+    PROWS.push(row);
+    return row;
+  }
+  function setPipe(row, n) {
+    if (!row) return;
+    row.nodes.forEach((el, idx) => {
+      const k = idx + 1;
+      el.classList.toggle('on', k <= n);
+      el.classList.toggle('now', k === n);
+    });
+    row.links.forEach((el, idx) => el.classList.toggle('on', idx + 1 < n));
+  }
+  function pipeClose(row, delay) {
+    if (!row) return;
+    row.el.dataset.active = '0';
+    const i = PROWS.indexOf(row); if (i >= 0) PROWS.splice(i, 1);
+    setTimeout(() => { if (row.el.parentNode) row.el.parentNode.removeChild(row.el); }, delay || 1500);
+  }
+
+  // ---------- 派单 ----------
+  const busyZones = new Set();
+  const log = [];
+  function addLog(s) {
+    log.unshift(s); if (log.length > 6) log.pop();
+    document.getElementById('tlist').innerHTML = log.map(x => '<div class="item">' + x + '</div>').join('');
+  }
+
+  async function runTask(agent, z) {
+    busyZones.add(z.id); agent.busy = true;
+    const row = pipeOpen(z.name + ' · ' + agent.id.replace(/^.*-/, ''));
+    const p1 = chain([bossSeat, doorPt(boss), doorPt(ops)]);
+    const p2 = chain([gmSeat, doorPt(ops), doorPt(z), seatPt(agent)]);
+    const p3 = chain([seatPt(agent), doorPt(z), doorPt(ops), gmSeat]);
+    const p4 = p2 && p2.slice().reverse();
+    const tf = newFlow(0xffcc66);          // 一单一条线：dispatch 建，report 收
+
+    setPipe(row, 1);
+    const b1 = bubble('命令'); b1.x = bossSeat.x; b1.y = bossSeat.y - 30;
+    flowExtend(tf, p1, 0xffcc66, 220);
+    addLog('<span style="color:#ffcc66">老板下达</span> → ' + z.name);
+    await moveTo(b1, p1, 220);
+    killBubble(b1);
+    // 线留着：任务没结束，线就一直在（不再到站即销毁）
+
+    setPipe(row, 2);
+    const b2 = bubble('拆单', 0x66aaff); b2.x = gmSeat.x; b2.y = gmSeat.y - 30;
+    flowExtend(tf, p2, 0x66aaff, 220);
+    addLog('<span style="color:#66aaff">总经理拆单</span> → ' + z.name + ' · ' + agent.id);
+    await sleep(700);
+    await moveTo(b2, p2, 220);
+    killBubble(b2);
+
+    setPipe(row, 3);
+    agent.state = 'working'; paint(agent);
+    await sleep(6000);                     // 执行段最长：此时线停着、点停在工位，图上有线可读
+    setPipe(row, 4);
+    agent.state = 'reporting'; paint(agent);
+    flowExtend(tf, p3, 0x57c785, 190);
+    addLog('<span style="color:#9fb2c9">' + agent.id + ' 去上级汇报</span>');
+    await moveTo(agent.c, p3, 190);
+    dropFlow(tf);                          // 到汇报站，这条任务线结束
+    const rb = bubble('汇报', 0x57c785); rb.x = gmSeat.x; rb.y = gmSeat.y - 34;
+    await sleep(1500);
+    killBubble(rb);
+
+    setPipe(row, 5);
+    const f4 = newFlow(0x8a93a3);
+    flowExtend(f4, p4, 0x8a93a3, 190);
+    await moveTo(agent.c, p4, 190);
+    dropFlow(f4);
+    agent.state = 'idle'; paint(agent);
+    agent.busy = false; busyZones.delete(z.id);
+    addLog('<span style="color:#6b7d94">' + agent.id + ' 回到工位</span>');
+    pipeClose(row, 1600);
+  }
+
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  const STATIC = new URLSearchParams(location.search).has('static');
+  // ?adv=N：先把模拟按 0.05s/帧推进 N 帧，再渲染首帧（用于确定性截图验收）
+  const ADV = Number(new URLSearchParams(location.search).get('adv') || 0);
+  // ?tasks=N：静态验收时同时起 N 单（不同部门），用来看「一单一点」的数量是否可读
+  const TASKS = Math.max(1, Math.min(4, Number(new URLSearchParams(location.search).get('tasks') || 1)));
+  if (STATIC) {
+    const go = () => {
+      const plan = [['tech', 'tech-S02'], ['finance', 'finance-S02'], ['data', 'data-S02'], ['ui', 'ui-S02']];
+      for (let i = 0; i < TASKS && i < plan.length; i++) {
+        const z = zById[plan[i][0]];
+        const ag = agents.find(a => a.zone_id === plan[i][0] && a.seat.seat_id === plan[i][1]) || agents[0];
+        runTask(ag, z).catch(() => {});
+      }
+    };
+    if (ADV > 0) go(); else setTimeout(go, 500);
+  } else {
+    setInterval(() => {
+      if (st.paused) return;
+      const cands = DATA.zones.filter(z => z.role === 'function' && !busyZones.has(z.id));
+      if (!cands.length) return;
+      const z = pick(cands);
+      const free = agents.filter(a => a.zone_id === z.id && !a.busy);
+      if (!free.length) return;
+      runTask(pick(free), z).catch(() => {});
+    }, 8500);
+  }
+
+  // ---------- HUD ----------
+  function updateHud() {
+    const away = agents.filter(a => {
+      if (!a.c) return false;
+      const sp = seatPt(a);
+      return Math.hypot(a.c.x - sp.x, a.c.y - sp.y) > 24;
+    }).length;
+    document.getElementById('h-on').textContent = agents.length;
+    document.getElementById('h-work').textContent = agents.filter(a => a.state === 'working').length;
+    document.getElementById('h-move').textContent = agents.filter(a => a.state === 'reporting').length;
+    document.getElementById('h-empty').textContent = (seatTotal - agents.length) + away;
+    drawMeters();
+  }
+  // 每场景：一个状态点（有活儿=accent，静止=灰）+ 一条按席位切段的占用条
+  function zoneStat(z) {
+    const mine = agents.filter(a => a.zone_id === z.id);
+    const work = mine.filter(a => a.state === 'working').length;
+    const move = mine.filter(a => a.state === 'reporting').length;
+    return { mine: mine.length, work: work, move: move, idle: mine.length - work - move,
+             total: Math.max(z.seats.length, mine.length) };
+  }
+  function drawMeters() {
+    if (MODE !== 'pixi' || !zoneMeters) return;
+    DATA.zones.forEach(z => {
+      const g = zoneMeters[z.id];
+      if (!g) return;
+      g.clear();
+      const s = zoneStat(z);
+      const STEP = 11, HH = 3, TOP = 7;
+      // 状态点
+      const dot = s.work ? ACCENT[z.id] || 0x57c785 : (s.move ? 0xe0b25d : 0x5a6a7d);
+      g.circle(0, 0, 3.2).fill({ color: dot, alpha: 1 });
+      // 占用条：工作 / 走动 / 空闲 / 空席
+      let x = 10;
+      const seg = (n, color, alpha) => {
+        if (n <= 0) return;
+        g.rect(x, TOP, n * STEP - 2, HH).fill({ color: color, alpha: alpha });
+        x += n * STEP;
+      };
+      seg(s.work, ACCENT[z.id] || 0x57c785, 1);
+      seg(s.move, 0xe0b25d, 0.9);
+      seg(s.idle, 0x6b7f96, 0.75);
+      seg(s.total - s.mine, 0x46536a, 1);
+      const tl = zoneMeterTxt && zoneMeterTxt[z.id];
+      if (tl) tl.text = (s.work + s.move) + '/' + s.total;
+    });
+  }
+  // 同一份计量在 Canvas2D 降级路径里也要画（降级不等于功能消失）
+  function drawMeters2d() {
+    if (!ctx2d) return;
+    DATA.zones.forEach(z => {
+      const s = zoneStat(z);
+      const x0 = (z.rect[0] + 1) * T + 6, y0 = (z.rect[1] + 1) * T + 26;
+      const dot = s.work ? ACCENT[z.id] || 0x57c785 : (s.move ? 0xe0b25d : 0x5a6a7d);
+      ctx2d.fillStyle = hex(dot);
+      ctx2d.beginPath(); ctx2d.arc(x0, y0, 3.2, 0, Math.PI * 2); ctx2d.fill();
+      let x = x0 + 10;
+      const seg = (n, color, alpha) => {
+        if (n <= 0) return;
+        ctx2d.globalAlpha = alpha;
+        ctx2d.fillStyle = hex(color);
+        ctx2d.fillRect(x, y0 + 7, n * 11 - 2, 3);
+        ctx2d.globalAlpha = 1;
+        x += n * 11;
+      };
+      seg(s.work, ACCENT[z.id] || 0x57c785, 1);
+      seg(s.move, 0xe0b25d, 0.9);
+      seg(s.idle, 0x6b7f96, 0.75);
+      seg(s.total - s.mine, 0x46536a, 1);
+      ctx2d.fillStyle = '#8fa3bd';
+      ctx2d.font = '10px "PingFang SC", sans-serif';
+      ctx2d.fillText((s.work + s.move) + '/' + s.total, x0 + 52, y0 + 3);
+    });
+  }
+  updateHud();          // 首帧先刷一次，避免进页面 300ms 内 HUD 显示「在岗 0」
+  setInterval(updateHud, 300);
+
+  // ---------- Canvas2D 渲染 ----------
+  function drawTileMap() {
+    const cols = TMAP.tilesets[0].columns;
+    TMAP.layers.forEach(layer => {
+      if (layer.type !== 'tilelayer') return;
+      const wT = layer.width;
+      for (let i = 0; i < layer.data.length; i++) {
+        const gid = layer.data[i];
+        if (!gid || gid === 10) continue;   // 10=建筑外，交给底色，避免拼缝
+        const idx = gid - 1;
+        const sx = (idx % cols) * T, sy = Math.floor(idx / cols) * T;
+        ctx2d.drawImage(TILES_IMG, sx, sy, T, T, (i % wT) * T, Math.floor(i / wT) * T, T, T);
+      }
+    });
+  }
+
+  function render2d() {
+    const r = Math.min(2, window.devicePixelRatio || 1);
+    ctx2d.setTransform(1, 0, 0, 1, 0, 0);
+    ctx2d.fillStyle = '#0e1116';
+    ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+    ctx2d.setTransform(r, 0, 0, r, 0, 0);
+    ctx2d.translate(camX, camY); ctx2d.scale(zoom, zoom);
+
+    if (TILES_OK) {
+      drawTileMap();
+    } else {
+    ctx2d.fillStyle = '#161a21';
+    DATA.corridors.forEach(c => {
+      ctx2d.fillRect(c.rect[0] * T, c.rect[1] * T, (c.rect[2] - c.rect[0] + 1) * T, (c.rect[3] - c.rect[1] + 1) * T);
+    });
+    DATA.zones.forEach(z => {
+      const rr = z.rect;
+      ctx2d.fillStyle = hex(ROLE_COLOR[z.role] || 0x1d2b24);
+      ctx2d.fillRect((rr[0] + 1) * T, (rr[1] + 1) * T, (rr[2] - rr[0] - 1) * T, (rr[3] - rr[1] - 1) * T);
+      ctx2d.fillStyle = '#2b3444';
+      ctx2d.fillRect(rr[0] * T, rr[1] * T, (rr[2] - rr[0] + 1) * T, T);
+      ctx2d.fillRect(rr[0] * T, rr[3] * T, (rr[2] - rr[0] + 1) * T, T);
+      ctx2d.fillRect(rr[0] * T, rr[1] * T, T, (rr[3] - rr[1] + 1) * T);
+      ctx2d.fillRect(rr[2] * T, rr[1] * T, T, (rr[3] - rr[1] + 1) * T);
+      ctx2d.fillStyle = '#2a3547';
+      ctx2d.fillRect(z.door.tile[0] * T, z.door.tile[1] * T, T, T);
+    });
+
+    // 会议室长桌 / 茶水间吧台
+    DATA.zones.forEach(z => {
+      if (z.id === 'meeting') {
+        const r = z.rect;
+        ctx2d.fillStyle = '#33404f';
+        ctx2d.fillRect((r[0] + 2) * T, (r[1] + 3) * T, (r[2] - r[0] - 3) * T, 3 * T);
+        ctx2d.fillStyle = '#263341';
+        for (let i = 0; i < Math.floor((r[2] - r[0] - 4) / 3); i++) {
+          ctx2d.fillRect((r[0] + 2 + i * 3) * T + 8, (r[1] + 2) * T + 6, T - 16, T - 14);
+          ctx2d.fillRect((r[0] + 2 + i * 3) * T + 8, (r[1] + 6) * T + 6, T - 16, T - 14);
+        }
+      }
+      if (z.id === 'pantry') {
+        const r = z.rect;
+        ctx2d.fillStyle = '#33404f';
+        ctx2d.fillRect((r[0] + 2) * T, (r[1] + 6) * T, (r[2] - r[0] - 3) * T, 2 * T);
+        ctx2d.fillStyle = '#54657c';
+        ctx2d.fillRect((r[0] + 2) * T, (r[1] + 6) * T, (r[2] - r[0] - 3) * T, 6);
+      }
+    });
+
+    if (zoom >= 0.45) {
+      DATA.zones.forEach(z => z.seats.forEach(s => {
+        const d = s.desk_tile, p = s.tile;
+        ctx2d.fillStyle = '#2f3b4a';
+        ctx2d.fillRect(d[0] * T + 5, d[1] * T + 5, T - 10, T - 12);
+        ctx2d.fillStyle = '#54657c';
+        ctx2d.fillRect(d[0] * T + 9, d[1] * T + 9, T - 18, 8);
+        ctx2d.fillStyle = '#263341';
+        ctx2d.fillRect(p[0] * T + 9, p[1] * T + 15, T - 18, T - 20);
+      }));
+    }
+    }
+
+    DATA.zones.forEach(z => {
+      ctx2d.fillStyle = hex(ACCENT[z.id] || 0xffffff);
+      ctx2d.font = '600 15px "PingFang SC", sans-serif';
+      ctx2d.fillText(z.name + (z.headcount ? ' · ' + z.headcount + '人' : ''),
+        (z.rect[0] + 1) * T + 5, (z.rect[1] + 1) * T + 18);
+    });
+    drawMeters2d();    // 状态点 + 占用条（降级路径同源）
+
+    const CLK = st.clock || 0;
+    agents.forEach(a => {
+      const dx = a.c.x - (a.px === undefined ? a.c.x : a.px);
+      const dy = a.c.y - (a.py === undefined ? a.c.y : a.py);
+      const moving = Math.abs(dx) + Math.abs(dy) > 0.05;
+      if (moving) {
+        if (Math.abs(dx) > Math.abs(dy)) a.dir = dx > 0 ? 1 : 3;
+        else a.dir = dy > 0 ? 0 : 2;
+        a.frame = Math.floor(CLK * 6) % 3;
+      } else if (a.frame === undefined) { a.dir = 0; a.frame = 0; }
+      a.px = a.c.x; a.py = a.c.y;
+      const pal = a.pal === undefined ? (a.pal = paletteOf(a.zone_id || '')) : a.pal;
+      if (SPR_OK) {
+        const sx = (pal * 3 + a.frame) * SPR.cw;
+        const sy = (a.dir * 2 + (moving ? 1 : 0)) * SPR.ch;
+        const dw = 26, dh = 39;                   // 世界单位，脚底对齐
+        const bob = (a.state === 'idle' && !moving) ? Math.sin(CLK * 1.15 + (a.ph || 0)) * 1.2 : 0;
+        ctx2d.imageSmoothingEnabled = false;
+        ctx2d.drawImage(SPR_IMG, sx, sy, SPR.cw, SPR.ch,
+                        a.c.x - dw / 2, a.c.y - dh + 12 + bob, dw, dh);
+        ctx2d.fillStyle = a.color || '#57c785';
+        ctx2d.beginPath(); ctx2d.arc(a.c.x, a.c.y - 32, 2.5, 0, Math.PI * 2); ctx2d.fill();
+      } else {
+        ctx2d.fillStyle = a.color || '#6b7f96';
+        ctx2d.beginPath();
+        ctx2d.roundRect(a.c.x - 8, a.c.y - 11, 16, 19, 4);
+        ctx2d.fill();
+        ctx2d.fillStyle = '#c9a883';
+        ctx2d.beginPath(); ctx2d.arc(a.c.x, a.c.y - 13, 5, 0, Math.PI * 2); ctx2d.fill();
+        ctx2d.fillStyle = a.color || '#57c785';
+        ctx2d.beginPath(); ctx2d.arc(a.c.x, a.c.y - 25, 3, 0, Math.PI * 2); ctx2d.fill();
+      }
+      if (zoom >= 0.75) {
+        ctx2d.fillStyle = '#a8b8cc';
+        ctx2d.font = '11px "PingFang SC", sans-serif';
+        ctx2d.textAlign = 'center';
+        ctx2d.fillText(a.label.text, a.c.x, a.c.y - 30);
+        ctx2d.textAlign = 'left';
+      }
+    });
+
+    drawFlows2d();     // 连线与光点压在人之上：点停在工位时也读得见
+
+    bubbles.forEach(b => {
+      ctx2d.fillStyle = b.color;
+      ctx2d.beginPath(); ctx2d.roundRect(b.x - 26, b.y - 12, 52, 24, 6); ctx2d.fill();
+      ctx2d.fillStyle = '#101820';
+      ctx2d.font = '600 12px "PingFang SC", sans-serif';
+      ctx2d.textAlign = 'center';
+      ctx2d.fillText(b.text, b.x, b.y + 4);
+      ctx2d.textAlign = 'left';
+    });
+  }
+
+  let lastT = performance.now();
+  const __cost = [];
+  function loop2d(now) {
+    const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    const t0 = performance.now();
+    if (!st.paused) tickMotion(dt);
+    render2d();
+    __cost.push(performance.now() - t0);
+    if (__cost.length > 240) __cost.shift();
+    requestAnimationFrame(loop2d);
+  }
+
+  window.__frames = 0;
+  window.__spriteTick = 0;
+  let sTex = {}, sBase = null;
+  function sprTex(pal, dir, frame, moving) {
+    if (!sBase) sBase = PIXI.Texture.from(SPR_IMG);
+    const k = pal + '-' + dir + '-' + frame + '-' + (moving ? 1 : 0);
+    if (!sTex[k]) sTex[k] = new PIXI.Texture({ source: sBase.source,
+      frame: new PIXI.Rectangle((pal * 3 + frame) * SPR.cw, (dir * 2 + (moving ? 1 : 0)) * SPR.ch, SPR.cw, SPR.ch) });
+    return sTex[k];
+  }
+  function updateSprites() {
+    if (MODE !== 'pixi') return;
+    const CLK = st.clock || 0;
+    agents.forEach(a => {
+      const dx = a.c.x - (a.px === undefined ? a.c.x : a.px);
+      const dy = a.c.y - (a.py === undefined ? a.c.y : a.py);
+      const moving = Math.abs(dx) + Math.abs(dy) > 0.05;
+      if (moving) {
+        if (Math.abs(dx) > Math.abs(dy)) a.dir = dx > 0 ? 1 : 3;
+        else a.dir = dy > 0 ? 0 : 2;
+        a.frame = Math.floor(CLK * 6) % 3;
+      } else if (a.frame === undefined) { a.dir = 0; a.frame = 0; }
+      a.px = a.c.x; a.py = a.c.y;
+      const pal = a.pal === undefined ? (a.pal = paletteOf(a.zone_id || '')) : a.pal;
+      if (a.sprite) {
+        a.sprite.texture = sprTex(pal, a.dir, a.frame, moving);
+        // idle 小动作：低幅度呼吸（±1.2px），不是持续粒子；走动/工作时不呼吸
+        const bob = (a.state === 'idle' && !moving) ? Math.sin(CLK * 1.15 + (a.ph || 0)) * 1.2 : 0;
+        a.sprite.y = 12 + bob;
+      }
+      window.__spriteTick++;
+    });
+  }
+  function renderOnce() { window.__frames++; if (MODE === 'pixi') { updateSprites(); drawFlows(); app.render(); } else render2d(); }
+  fit();
+  window.__ready = true;
+  // ?bench=N：同步渲染 N 帧，用于外部 wall-clock 计时（虚拟时钟下 performance.now 不可用）
+  const BENCH = Number(new URLSearchParams(location.search).get('bench') || 0);
+  if (BENCH > 0) { for (let i = 0; i < BENCH; i++) render2d(); }
+
+  // ---------- ?selfcheck=1：D6 页面自检，自吐判据 JSON ----------
+  window.__builds = 1;
+  if (new URLSearchParams(location.search).get('selfcheck') === '1') {
+    window.addEventListener('error', ev => {
+      let pre = document.getElementById('sc-json');
+      if (!pre) { pre = document.createElement('pre'); pre.id = 'sc-json'; pre.style.display='none'; document.body.appendChild(pre); }
+      pre.textContent = JSON.stringify({ error: String(ev.message), at: ev.lineno + ':' + ev.colno, stack: String(ev.error && ev.error.stack).slice(0, 400) });
+      document.title = 'SC-ERR';
+    });
+    const R = MODE === '2d' ? Math.min(2, window.devicePixelRatio || 1) : (app.renderer.resolution || 1);
+    const probe = (() => {
+      const z = zById['tech'];
+      const s = z.seats.find(x => x.seat_id === 'tech-S02') || z.seats[0];
+      const a = agents.find(x => x.zone_id === 'tech' && x.seat === s) || agents[0];
+      return { seat: s, agent: a };
+    })();
+    // 两条渲染路径用同一取样口径：2d 直接读画布；pixi 用 renderer.extract 落到离屏 2d 画布再读
+    function surface() {
+      if (MODE === '2d') return {
+        scale: R, w: canvas.width, h: canvas.height,
+        get: (x, y, w, h) => { if (w <= 0 || h <= 0) return null; try { return ctx2d.getImageData(x, y, w, h).data; } catch (e) { return null; } }
+      };
+      const src = app.canvas;   // 屏幕坐标原点是左上，和 2d 路径同一套取样口径
+      const c2 = document.createElement('canvas');
+      c2.width = src.width; c2.height = src.height;
+      const g2 = c2.getContext('2d');
+      g2.drawImage(src, 0, 0);
+      const W = c2.width, H = c2.height;
+      const snapAll = () => { g2.clearRect(0, 0, W, H); g2.drawImage(app.canvas, 0, 0); return g2.getImageData(0, 0, W, H).data; };
+      let all = null;
+      return {
+        scale: app.renderer.resolution || 1, w: W, h: H,
+        get: (x, y, w, h) => {
+          if (w <= 0 || h <= 0) return null;
+          try {
+            if (!all) all = snapAll();
+          } catch (e) { return null; }
+          const out = new Uint8ClampedArray(w * h * 4);
+          for (let yy = 0; yy < h; yy++) {
+            const yy2 = Math.min(H - 1, Math.max(0, y + yy));
+            for (let xx = 0; xx < w; xx++) {
+              const xx2 = Math.min(W - 1, Math.max(0, x + xx));
+              const si = (yy2 * W + xx2) * 4, di = (yy * w + xx) * 4;
+              out[di] = all[si]; out[di + 1] = all[si + 1]; out[di + 2] = all[si + 2]; out[di + 3] = all[si + 3];
+            }
+          }
+          return out;
+        }
+      };
+    }
+    function region(sp, tile) {
+      const x = Math.round(camX + (tile[0] * T + T / 2) * zoom) * sp.scale;
+      const y = Math.round(camY + (tile[1] * T + T / 2) * zoom - 12 * zoom) * sp.scale;
+      const w = Math.max(8, Math.round(26 * zoom) * sp.scale), h = Math.max(8, Math.round(36 * zoom) * sp.scale);
+      const x0 = Math.max(0, Math.round(x - w / 2)), y0 = Math.max(0, Math.round(y - h / 2));
+      const ww = Math.min(sp.w - x0, Math.round(w)), hh = Math.min(sp.h - y0, Math.round(h));
+      if (ww <= 0 || hh <= 0) return null;
+      const d = sp.get(x0, y0, ww, hh);
+      return d ? { d: d, n: ww * hh } : null;
+    }
+    function diffPx(a, b) {
+      if (!a || !b) return null;
+      let n = 0;
+      for (let i = 0; i < a.d.length; i += 4) {
+        if (Math.abs(a.d[i] - b.d[i]) + Math.abs(a.d[i + 1] - b.d[i + 1]) + Math.abs(a.d[i + 2] - b.d[i + 2]) > 24) n++;
+      }
+      return n / a.n;
+    }
+    function nonblank(sp) {
+      let n = 0, t = 0;
+      try {
+        const d = sp.get(0, 0, sp.w, sp.h);
+        if (!d) return null;
+        for (let i = 0; i < d.length; i += 4 * 11) {
+          t++;
+          if (Math.abs(d[i] - 14) > 8 || Math.abs(d[i + 1] - 17) > 8 || Math.abs(d[i + 2] - 22) > 8) n++;
+        }
+      } catch (e) { return null; }
+      return n / t;
+    }
+    let canvas0 = document.querySelectorAll('canvas').length, lodSeen = [];
+    const tick0 = () => new Promise(r => setTimeout(r, 0));
+    (async () => {
+      renderOnce(); await tick0();
+      const sp0 = surface();
+      const nb0 = nonblank(sp0);
+      const baseB = region(sp0, probe.seat.tile);
+      runTask(probe.agent, zById['tech']).catch(() => {});
+      let dist = 0, awayAt = -1;
+      for (let i = 0; i < 400; i++) {
+        tickMotion(0.05);
+        renderOnce();
+        await tick0();
+        const sp = seatPt(probe.agent);
+        dist = Math.hypot(probe.agent.c.x - sp.x, probe.agent.c.y - sp.y);
+        if (dist > 40) { awayAt = i; break; }
+      }
+      updateHud();
+      const sp1 = surface();
+      const transitB = region(sp1, probe.seat.tile);
+      for (let i = 0; i < 30; i++) { tickMotion(0.05); renderOnce(); await tick0(); }
+      const z0 = zoom;
+      zoom = 0.45; apply(); renderOnce(); lodSeen.push(document.getElementById('h-lod').textContent);
+      zoom = 1.25; apply(); renderOnce(); lodSeen.push(document.getElementById('h-lod').textContent);
+      zoom = z0; apply(); renderOnce();
+      const tb = performance.now();
+      for (let k = 0; k < 60; k++) renderOnce();
+      const rawCost = (performance.now() - tb) / 60;
+      const cost = rawCost > 0 ? +rawCost.toFixed(2) : null;
+      updateHud();
+      const hudEmpty = Number(document.getElementById('h-empty').textContent) || 0;
+      const pd = diffPx(baseB, transitB);
+      const out = {
+        dim: 'd6',
+        artifact: 'demo/office-demo.html?selfcheck=1',
+        renderers: document.querySelectorAll('#stage canvas').length,
+        canvas_elements: document.querySelectorAll('canvas').length,
+        renderer_mode: MODE === 'pixi' ? 'pixi-webgl' : 'canvas2d-fallback',
+        renderer_type: MODE === 'pixi' ? String(app.renderer.type) : '2d',
+        renderer_name: MODE === 'pixi' ? String(app.renderer.name) : 'canvas2d',
+        pixi_version: (typeof PIXI !== 'undefined') ? PIXI.VERSION : null,
+        pixi_error: window.__pixiErr || null,
+        canvas: {
+          nonblank_ratio: nb0 === null ? null : +nb0.toFixed(4),
+          canvas_elements: document.querySelectorAll('canvas').length,
+          stable_same_canvas: document.querySelectorAll('canvas').length === canvas0
+        },
+        fps: null,
+        fps_evidence: {
+          measured: false,
+          render_cost_ms: cost,
+          budget_ms: 16.666,
+          headroom_x: (cost && cost > 0) ? +(16.666 / cost).toFixed(2) : null,
+          vsync_cap: 60,
+          method: '同一渲染入口 renderOnce() 连跑 60 帧 wall-clock 均值（2d=render2d / pixi=app.render）' + (cost === null ? '；虚拟时钟下计时被归零，如实记 null' : ''),
+          note: 'headless 走虚拟时钟，rAF 间隔不可信；真机 fps 需一次带显存的 GUI 实测后才能填这个字段'
+        },
+        checks: {
+          empty_seat_visible: hudEmpty >= 1 && (pd || 0) > 0.05,
+          empty_seat_hud: hudEmpty,
+          empty_seat_pixel_diff: pd === null ? null : +pd.toFixed(4),
+          lod_switch_no_rebuild: document.querySelectorAll('canvas').length === canvas0 && window.__builds === 1,
+          lod_labels: lodSeen,
+          lod_switched: lodSeen.length === 2 && lodSeen[0] !== lodSeen[1]
+        },
+        dbg: {
+          sp0: [sp0.w, sp0.h, sp0.scale], sp1: [sp1.w, sp1.h, sp1.scale],
+          baseN: baseB ? baseB.n : null, transitN: transitB ? transitB.n : null,
+          baseFirst: baseB ? Array.from(baseB.d.slice(0, 8)) : null,
+          transitFirst: transitB ? Array.from(transitB.d.slice(0, 8)) : null,
+          seatTile: probe.seat.tile, cam: [+camX.toFixed(1), +camY.toFixed(1), +zoom.toFixed(3)]
+        },
+        frames_rendered_in_selfcheck: window.__frames,
+        probe_state: probe.agent.state,
+        probe_dist_px: +Math.round(dist || 0),
+        away_at_frame: awayAt,
+        grid: [W, H], seats: seatTotal, agents: agents.length,
+        generated_at_utc: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+        note: MODE === 'pixi' ? 'Pixi 单舞台（WebGL）路径已实现；fps 待真机实测'
+                             : 'Pixi 初始化失败已降级 Canvas2D：' + (window.__pixiErr || 'unknown')
+      };
+      const pre = document.createElement('pre');
+      pre.id = 'sc-json'; pre.style.display = 'none';
+      pre.textContent = JSON.stringify(out);
+      document.body.appendChild(pre);
+      document.title = 'SC-DONE';
+
+    })();
+  }
+
+
+  // ---------- ?probe=fps：真实时钟下的帧率取证（headless GPU + 真 performance.now） ----------
+  if (new URLSearchParams(location.search).get('probe') === 'fps') {
+    const PORT = Number(new URLSearchParams(location.search).get('port') || 8791);
+    const N = Number(new URLSearchParams(location.search).get('frames') || 240);
+    const WARM = Number(new URLSearchParams(location.search).get('warm') || 60);
+    const deltas = [];
+    let lastT = null, cost = null, sampled = false, seen = 0;
+    const q = (arr, p) => arr[Math.min(arr.length - 1, Math.max(0, Math.floor(p * arr.length)))];
+    const gpuInfo = (() => {
+      try {
+        const gl = MODE === 'pixi' ? app.renderer.gl : (canvas.getContext('webgl2') || canvas.getContext('webgl'));
+        if (!gl) return { api: null, renderer: null, vendor: null };
+        const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+        return {
+          api: typeof WebGL2RenderingContext !== 'undefined' && gl instanceof WebGL2RenderingContext ? 'webgl2' : 'webgl',
+          renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : String(gl.getParameter(gl.RENDERER)),
+          vendor: dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : String(gl.getParameter(gl.VENDOR))
+        };
+      } catch (e) { return { api: 'err', renderer: String(e && e.message) }; }
+    })();
+    function verdict() {
+      const s = deltas.slice().sort((a, b) => a - b);
+      const sum = deltas.reduce((a, b) => a + b, 0);
+      return {
+        dim: 'd6',
+        artifact: 'demo/office-demo.html?probe=fps&frames=' + N,
+        renderer_mode: MODE === 'pixi' ? 'pixi-webgl' : 'canvas2d-fallback',
+        renderer_name: MODE === 'pixi' ? String(app.renderer.name) : 'canvas2d',
+        renderer_type: MODE === 'pixi' ? String(app.renderer.type) : '2d',
+        pixi_version: (typeof PIXI !== 'undefined') ? PIXI.VERSION : null,
+        pixi_error: window.__pixiErr || null,
+        gpu: gpuInfo,
+        clock: 'real (performance.now)',
+        warmup_frames_dropped: WARM,
+        samples: deltas.length,
+        window_ms: +sum.toFixed(1),
+        fps: +(1000 * deltas.length / sum).toFixed(1),
+        fps_from_p50: +(1000 / Math.max(0.01, q(s, 0.50))).toFixed(1),
+        slow_frames_over_20ms: s.filter(x => x > 20).length,
+        delta_p50_ms: +q(s, 0.50).toFixed(2),
+        delta_p95_ms: +q(s, 0.95).toFixed(2),
+        delta_p99_ms: +q(s, 0.99).toFixed(2),
+        delta_max_ms: +q(s, 0.999).toFixed(2),
+        render_cost_ms: cost,
+        view_px: [viewW(), viewH()],
+        device_pixel_ratio: window.devicePixelRatio || 1,
+        grid: [W, H], seats: seatTotal, agents: agents.length,
+        frames_total: window.__frames,
+        generated_at_utc: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
+        env: { headless: !window.menubar, hardware_concurrency: navigator.hardwareConcurrency || null, ua: navigator.userAgent.slice(0, 120) }
+      };
+    }
+    function send(obj) {
+      const pre = document.createElement('pre');
+      pre.id = 'sc-json'; pre.style.display = 'none';
+      pre.textContent = JSON.stringify(obj);
+      document.body.appendChild(pre);
+      document.title = 'SC-DONE:' + obj.fps;
+      const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+      const img = new Image();
+      img.src = 'http://127.0.0.1:' + PORT + '/fps?d=' + encodeURIComponent(b64);
+    }
+    const loopProbe = (t) => {
+      if (lastT !== null) {
+        seen++;
+        if (seen > WARM) deltas.push(t - lastT);   // 前 WARM 帧只预热不计（冷启动/着色器编译/图集解码的尖峰不算稳态）
+      }
+      lastT = t;
+      if (deltas.length >= N && !sampled) {
+        sampled = true;
+        // 再测 60 帧渲染成本（真实时钟，非虚拟）
+        const t0 = performance.now();
+        for (let i = 0; i < 60; i++) renderOnce();
+        cost = +((performance.now() - t0) / 60).toFixed(2);
+        send(verdict());
+        return;
+      }
+      if (!sampled) requestAnimationFrame(loopProbe);
+    };
+    requestAnimationFrame(loopProbe);
+  }
+
+  if (MODE === 'pixi') {
+    app.ticker.add(() => { if (!st.paused) tickMotion(Math.min(0.05, app.ticker.deltaMS / 1000)); updateSprites(); drawFlows(); });
+    // ?adv=N 在 Pixi 路径同样生效（确定性截图/回归需要两条路径同一时刻）
+    for (let i = 0; i < ADV; i++) {
+      tickMotion(0.05); updateSprites(); app.render();
+      await new Promise(r => setTimeout(r, 0));   // 让 await 链推进，否则 moveTo 的 promise 永远排不上
+    }
+  } else {
+    for (let i = 0; i < ADV; i++) { tickMotion(0.05); await new Promise(r => setTimeout(r, 0)); }
+    lastT = performance.now();
+    requestAnimationFrame(loop2d);
+  }
+})();
+</script>
+</body>
+</html>

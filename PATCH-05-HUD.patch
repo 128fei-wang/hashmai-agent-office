@@ -1,0 +1,10 @@
+--- demo/office-demo.template.html
++++ demo/office-demo.template.html
+@@ -726,6 +726,7 @@
+       ctx2d.fillText((s.work + s.move) + '/' + s.total, x0 + 52, y0 + 3);
+     });
+   }
++  updateHud();          // 首帧先刷一次，避免进页面 300ms 内 HUD 显示「在岗 0」
+   setInterval(updateHud, 300);
+ 
+   // ---------- Canvas2D 渲染 ----------

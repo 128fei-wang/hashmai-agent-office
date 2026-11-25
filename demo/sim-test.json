@@ -1,0 +1,51 @@
+{
+ "verdict": "PASS",
+ "checks": [
+  {
+   "check": "grid_dims",
+   "ok": true,
+   "detail": "53x24"
+  },
+  {
+   "check": "walkable_count",
+   "ok": true,
+   "detail": "698 vs 698"
+  },
+  {
+   "check": "all_seats_reachable",
+   "ok": true,
+   "detail": "23 seats, unreachable "
+  },
+  {
+   "check": "paths_stepwise_valid",
+   "ok": true,
+   "detail": "invalid "
+  },
+  {
+   "check": "simplified_legs_walkable",
+   "ok": true,
+   "detail": "broken "
+  },
+  {
+   "check": "py_js_route_agree",
+   "ok": true,
+   "detail": "mismatch "
+  },
+  {
+   "check": "assign_count",
+   "ok": true,
+   "detail": "23 vs 23"
+  },
+  {
+   "check": "assign_unique_seats",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "reporting_routes_exist",
+   "ok": true,
+   "detail": "tech:14 data:9 ui:28 hr:24 finance:19 qa_lab:38"
+  }
+ ],
+ "generated_at": "2026-11-25T05:55:04.654Z"
+}

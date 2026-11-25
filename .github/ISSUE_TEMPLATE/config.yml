@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全问题（私密上报）
+    url: https://github.com/hashmai/hashmai-agent-office/security/advisories/new
+    about: 请勿用公开 issue 报告安全漏洞
+  - name: 使用问题与讨论
+    url: https://github.com/hashmai/hashmai-agent-office/discussions
+    about: 安装、构建、参数怎么用，先在这里问

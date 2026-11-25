@@ -1,0 +1,606 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://roost.local/schema/agent-event.schema.json",
+  "title": "Roost Agent Event Envelope v1.2",
+  "description": "多 Agent 监控面板的事件信封契约。seq 全局单调，at-least-once 投递，客户端按 seq 去重。v1.2 在 v1.1 的 7 个遥测事件之上「增」5 个 task/seat 事件（task_dispatch/task_accept/task_report/seat_claim/seat_release），并把 AgentState 从 6 态扩到 9 态（新增 commuting/reporting/standby）、AgentSnapshot 增 seat_id/zone_id；信封字段 v/seq/ts(epoch ms)/kind 一行未改。",
+  "type": "object",
+  "required": [
+    "v",
+    "seq",
+    "ts",
+    "kind"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "v": {
+      "type": "integer",
+      "const": 1,
+      "description": "契约版本；未知版本由客户端降级处理"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "全局单调递增信封序号"
+    },
+    "ts": {
+      "type": "integer",
+      "description": "服务端生成时间，epoch ms"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "snapshot",
+        "delta",
+        "heartbeat",
+        "error"
+      ]
+    },
+    "chunk": {
+      "type": "object",
+      "description": "仅当单帧超过 64KB 时出现",
+      "required": [
+        "index",
+        "total"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "description": "kind=snapshot 时必填：全量真值",
+      "required": [
+        "agents"
+      ],
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AgentSnapshot"
+          }
+        },
+        "server_time": {
+          "type": "integer"
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "description": "kind=delta 时必填：增量事件，顺序即应用顺序",
+      "items": {
+        "$ref": "#/$defs/AgentEvent"
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "replay_window_exceeded",
+            "unauthorized",
+            "rate_limited",
+            "internal"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "retry_after_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "schema_rev": {
+      "type": "string",
+      "enum": [
+        "1.1",
+        "1.2"
+      ],
+      "description": "可选；契约修订号。缺省按 1.1 处理。客户端遇到未知事件 type 必须忽略而非报错。"
+    }
+  },
+  "$defs": {
+    "AgentState": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "thinking",
+        "working",
+        "blocked",
+        "done",
+        "error",
+        "commuting",
+        "reporting",
+        "standby"
+      ],
+      "description": "agent 生命周期状态。commuting=离开工位在走廊行走；reporting=已到上级工位/会议室汇报；standby=超编无空位，在待命池（不占工位、不进「在岗」计数）。"
+    },
+    "AgentSnapshot": {
+      "type": "object",
+      "required": [
+        "agent_id",
+        "alias",
+        "state",
+        "progress",
+        "tokens_in",
+        "tokens_out",
+        "cost_usd",
+        "updated_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.:-]{3,64}$"
+        },
+        "alias": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "state": {
+          "$ref": "#/$defs/AgentState"
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "progress": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "-1 表示进度未知"
+        },
+        "tokens_in": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tokens_out": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "started_at": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "updated_at": {
+          "type": "integer"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "扁平字符串映射：渠道/model/session 等；禁止嵌套结构"
+        },
+        "seat_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z0-9_]+-S[0-9]{2}$",
+          "description": "当前占用工位 id，如 tech-S02；未占位为 null"
+        },
+        "zone_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 32,
+          "description": "所属/当前 zone_id，与 office-zones.json 的 zones[].id 一致"
+        }
+      },
+      "description": "一个 agent 的全量真值。seat_id/zone_id 是 v1.2 新增，为 null 表示未占位/未知。"
+    },
+    "AgentEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent"
+          ],
+          "properties": {
+            "type": {
+              "const": "agent_upsert"
+            },
+            "agent": {
+              "$ref": "#/$defs/AgentSnapshot"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent_id",
+            "state",
+            "at"
+          ],
+          "properties": {
+            "type": {
+              "const": "agent_state"
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "state": {
+              "$ref": "#/$defs/AgentState"
+            },
+            "task_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "at": {
+              "type": "integer"
+            },
+            "zone_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 32,
+              "description": "v1.2：跟 state 一起上报所在 zone，便于 store 一次落位"
+            },
+            "seat_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[a-z0-9_]+-S[0-9]{2}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent_id",
+            "progress",
+            "at"
+          ],
+          "properties": {
+            "type": {
+              "const": "agent_progress"
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "progress": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1
+            },
+            "at": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent_id",
+            "tokens_in",
+            "tokens_out",
+            "cost_usd",
+            "at"
+          ],
+          "properties": {
+            "type": {
+              "const": "usage_delta"
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "tokens_in": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tokens_out": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cost_usd": {
+              "type": "number",
+              "minimum": 0
+            },
+            "at": {
+              "type": "integer"
+            },
+            "idempotency_key": {
+              "type": "string",
+              "description": "可选；存在时客户端按该键去重，避免重复投递导致 token 翻倍"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent_id",
+            "at"
+          ],
+          "properties": {
+            "type": {
+              "const": "agent_remove"
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "at": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent_id",
+            "level",
+            "text",
+            "at"
+          ],
+          "properties": {
+            "type": {
+              "const": "log"
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "level": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warn",
+                "error"
+              ]
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "at": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "at"
+          ],
+          "properties": {
+            "type": {
+              "const": "heartbeat"
+            },
+            "at": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "task_id",
+            "agent_id",
+            "zone_id",
+            "at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "task_dispatch"
+            },
+            "task_id": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "zone_id": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "from_agent_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "at": {
+              "type": "integer"
+            },
+            "at_zone": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 32,
+              "description": "下发方所在 zone（老板办公室/运营中心）"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "task_id",
+            "agent_id",
+            "at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "task_accept"
+            },
+            "task_id": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "zone_id": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "at": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "task_id",
+            "agent_id",
+            "status",
+            "at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "task_report"
+            },
+            "task_id": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "zone_id": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "fail",
+                "blocked",
+                "partial"
+              ]
+            },
+            "summary": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "at": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent_id",
+            "seat_id",
+            "zone_id",
+            "at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "seat_claim"
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "seat_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+-S[0-9]{2}$"
+            },
+            "zone_id": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "at": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "agent_id",
+            "seat_id",
+            "at"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "seat_release"
+            },
+            "agent_id": {
+              "type": "string"
+            },
+            "seat_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+-S[0-9]{2}$"
+            },
+            "zone_id": {
+              "type": "string",
+              "maxLength": 32
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "report",
+                "leave",
+                "standby",
+                "removed"
+              ]
+            },
+            "at": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+name: Bug 报告
+description: 面板显示、渲染、动线或性能出现异常
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        谢谢反馈。请尽量把下面填满——渲染类问题**没有截图基本没法定位**。
+        安全漏洞请勿在此提交，请按 [SECURITY.md](../SECURITY.md) 私密上报。
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / 产物
+      description: 用的是哪个文件、什么版本的 sha（`shasum -a 256 demo/office-demo.html` 的结果）
+      placeholder: "demo/office-demo.html @ 0170be02…（v0.8）"
+    validations:
+      required: true
+  - type: dropdown
+    id: renderer
+    attributes:
+      label: 渲染路径
+      options:
+        - WebGL（默认）
+        - Canvas2D（?force2d=1）
+        - 不确定
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: 浏览器 + 版本、操作系统、屏幕分辨率
+      placeholder: "Chrome 131 / macOS 15 / 1600×1000"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从打开页面开始写，越具体越好（含 URL 参数）
+      placeholder: |
+        1. python3 -m http.server 8080
+        2. 打开 http://localhost:8080/demo/office-demo.html?tasks=2&adv=240
+        3. 等待 5 秒
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      description: 有报错请贴控制台原文；有自检 JSON 请贴 `?selfcheck=1` 的输出
+    validations:
+      required: true
+  - type: textarea
+    id: shots
+    attributes:
+      label: 截图 / 录屏
+      description: 直接拖拽图片到这里
+    validations:
+      required: false

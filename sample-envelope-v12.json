@@ -1,0 +1,86 @@
+{
+ "v": 1,
+ "seq": 12880,
+ "ts": 1795490520000,
+ "kind": "delta",
+ "schema_rev": "1.2",
+ "events": [
+  {
+   "type": "task_dispatch",
+   "task_id": "T-1124-07",
+   "agent_id": "tech-A2",
+   "zone_id": "tech",
+   "from_agent_id": "gm-01",
+   "title": "补 D6 自检件",
+   "at": 1795490520000,
+   "at_zone": "ops_center"
+  },
+  {
+   "type": "seat_release",
+   "agent_id": "tech-A2",
+   "seat_id": "tech-S02",
+   "zone_id": "tech",
+   "reason": "report",
+   "at": 1795490520100
+  },
+  {
+   "type": "agent_state",
+   "agent_id": "tech-A2",
+   "state": "commuting",
+   "task_id": "T-1124-07",
+   "zone_id": "ops_center",
+   "seat_id": null,
+   "at": 1795490520100
+  },
+  {
+   "type": "task_accept",
+   "task_id": "T-1124-07",
+   "agent_id": "tech-A2",
+   "zone_id": "ops_center",
+   "at": 1795490523000
+  },
+  {
+   "type": "agent_state",
+   "agent_id": "tech-A2",
+   "state": "reporting",
+   "task_id": "T-1124-07",
+   "zone_id": "ops_center",
+   "seat_id": null,
+   "at": 1795490523200
+  },
+  {
+   "type": "task_report",
+   "task_id": "T-1124-07",
+   "agent_id": "tech-A2",
+   "zone_id": "ops_center",
+   "status": "ok",
+   "summary": "D6 5/5 PASS",
+   "at": 1795490530000
+  },
+  {
+   "type": "agent_state",
+   "agent_id": "tech-A2",
+   "state": "standby",
+   "task_id": null,
+   "zone_id": "tech",
+   "seat_id": null,
+   "at": 1795490530100
+  },
+  {
+   "type": "seat_claim",
+   "agent_id": "tech-A2",
+   "seat_id": "tech-S02",
+   "zone_id": "tech",
+   "at": 1795490600000
+  },
+  {
+   "type": "agent_state",
+   "agent_id": "tech-A2",
+   "state": "working",
+   "task_id": "T-1124-08",
+   "zone_id": "tech",
+   "seat_id": "tech-S02",
+   "at": 1795490600100
+  }
+ ]
+}

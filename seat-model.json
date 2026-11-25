@@ -1,0 +1,56 @@
+{
+ "zones": [
+  {
+   "id": "ops_center",
+   "name": "总经理运营中心",
+   "seats": 3
+  },
+  {
+   "id": "tech",
+   "name": "技术部",
+   "seats": 3
+  },
+  {
+   "id": "data",
+   "name": "数据部",
+   "seats": 3
+  },
+  {
+   "id": "ui",
+   "name": "设计部",
+   "seats": 3
+  },
+  {
+   "id": "hr",
+   "name": "人力资源",
+   "seats": 3
+  },
+  {
+   "id": "finance",
+   "name": "财务部",
+   "seats": 3
+  },
+  {
+   "id": "qa_lab",
+   "name": "验证实验室",
+   "seats": 3
+  }
+ ],
+ "boss": 2,
+ "declared_total": 23,
+ "entry_commands": 1,
+ "occupancy_mode": "one_agent_per_seat",
+ "occupancy_note": "one agent per seat, no sharing; agents beyond seat count go to standby pool and are counted, not seated",
+ "seat_cap_per_dept": 3,
+ "source": "office-zones.json",
+ "grid": {
+  "w": 53,
+  "h": 24,
+  "tile_px": 32
+ },
+ "standby_policy": {
+  "pool": true,
+  "visible_max": 12,
+  "render_cap": 35
+ }
+}
