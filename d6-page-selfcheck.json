@@ -82,8 +82,8 @@
  "probe_dist_px": 41,
  "away_at_frame": 128,
  "grid": [
-   53,
-   24
+  53,
+  24
  ],
  "seats": 23,
  "agents": 23,
