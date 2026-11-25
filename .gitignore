@@ -50,3 +50,6 @@ demo/d5-*-bench.json
 *.key
 state.json
 secrets/
+
+# 业主个人视频抽帧（版权归原视频，不入开源仓库）
+demo/shots/ref-a-wall-45s.png
