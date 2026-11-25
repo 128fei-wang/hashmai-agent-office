@@ -88,18 +88,17 @@
 包目录（本包根 `roost-contract-01/`）：
 `agent-event.schema.json`（v1.2）、`CONTRACT-01.md`（本文件）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`（23 席重述版）、`ROOST-UI-ARCH-01.md`、`office-map.tmj`、`office-tileset.png`（128×128，之前漏发）、`agents.png`、`d6-page-selfcheck.json`（Pixi 单舞台路径 + 真 GPU fps）、`d6-fps.json`（fps 原始探针输出，DS canonical 落盘原件 `56c5b0dc`）、`SHA256SUMS.txt`、`verify.sh`（包自验入口）。
 
-源码根与判据器随仓库分发，不在此写本机绝对路径；判据器按 §6 的查找顺序（`$P98` → `./p98check.py` → `../p98-criteria-01/*/`）定位。
+源码根与判据器随仓库分发，不在此写本机绝对路径；本包不内置判据器，`verify.sh` 要求 `P98=` 显式指向 `p98check.py`，缺省不再自动查找。
 
-## 6. 包自验入口（零依赖，可复现）
+## 6. 包自验入口（schema 零依赖；D3/D6 需外部判据器，可复现）
 
 ```sh
-cd roost-contract-01 && sh verify.sh                 # 自动找判据器
-P98=/path/p98check.py sh verify.sh                   # 显式指定
+cd roost-contract-01 && P98=/path/p98check.py sh verify.sh   # P98 必填，指 D3/D6 判据器
 ```
 
-- **不依赖第三方库**：schema 校验用包内内置的 JSON Schema 子集校验器（只 python3 标准库），不需要 `pip install jsonschema`、不联网。
+- **schema 校验不依赖第三方库**：用包内内置的 JSON Schema 子集校验器（只 python3 标准库），不需要 `pip install jsonschema`、不联网；D3/D6 两维另需外部判据器（见上）。
 - 覆盖 **17 条**包内断言：schema 2020-12 / 12 事件 / 9 态 / 两份样例合法 / 四条反例必须被拒（B 世代信封、未知事件键、`state=queued`、非法 `seat_id`）/ headcount 23 = 席位和 / 7 部门各 ≤3 / boss 2 / `standby_seats=0` 且 cap=3 / `seat_id` 命名与 zone 绑定 / seat-model 与 zones 一致。
 - 退出码：**0 全过（含 D3/D6 实跑 5/5）｜1 有 FAIL｜2 判据器缺失或维记 UNTESTED**。不再用 `|| true` 吞失败。
-- 实测：`sh verify.sh` → `PKG_CHECKS pass=17 fail=0`，D3 5/5、D6 5/5，rc=0；`P98=/nonexistent` → rc=2；故意把 `seat-model.json` 改 20 席 → rc=1 且两行 FAIL。
+- 实测：`P98=<判据器> sh verify.sh` → `PKG_CHECKS pass=17 fail=0`，D3 5/5、D6 5/5，rc=0；缺 `P98` 或 `P98=/nonexistent` → rc=2；故意把 `seat-model.json` 改 20 席 → rc=1 且两行 FAIL。
 
 > 判据口径说明：`s4_entry_commands` 现在**可执行验证**（跑 `verify.sh` 拿退出码），不再只读声明字段。D6 的 `u3_fps` 已从「未测」变成**实测**：`d6-page-selfcheck.json` 换为 Pixi 单舞台（WebGL2）路径的页面自检，帧率取 `d6-fps.json`（DS canonical 落盘原件 `56c5b0dc`）——本机 M5、ANGLE Metal 真 GPU、真实 `performance.now`（不设 `--virtual-time-budget`），丢 90 帧预热后采 300 帧：**60.0 fps、p50 16.7ms、p95 16.8ms、p99 16.8ms、>20ms 慢帧 0**；`--force-device-scale-factor=2`（3200×1600 背衬）复跑同为 60.0 fps、慢帧 0。口径边界写清：headless 无窗口管理器，60Hz 是 BeginFrame 节拍，所以结论只能到「≥60 且零掉帧」，不等于设备天花板。D6 因此记 **5/5**，是否采信由 DS 复跑后定。
