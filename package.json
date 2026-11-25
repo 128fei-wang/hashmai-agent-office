@@ -26,7 +26,8 @@
     "demo/",
     "assets/",
     "tools/",
-    "docs/"
+    "patches/",
+    "*.md"
   ],
   "scripts": {
     "build": "python3 tools/build_office.py && python3 tools/build_seatmodel.py && python3 tools/build_tiles.py && python3 tools/build_sprites.py && python3 tools/build_demo.py && python3 tools/build_single_file.py",
