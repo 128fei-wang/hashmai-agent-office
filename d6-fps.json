@@ -1,0 +1,44 @@
+{
+  "dim": "d6",
+  "artifact": "demo/office-demo.html?probe=fps&frames=300",
+  "renderer_mode": "pixi-webgl",
+  "renderer_name": "webgl",
+  "renderer_type": "1",
+  "pixi_version": "8.6.6",
+  "pixi_error": null,
+  "gpu": {
+    "api": "webgl2",
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M5, Unspecified Version)",
+    "vendor": "Google Inc. (Apple)"
+  },
+  "clock": "real (performance.now)",
+  "warmup_frames_dropped": 90,
+  "samples": 300,
+  "window_ms": 4999.8,
+  "fps": 60,
+  "fps_from_p50": 59.9,
+  "slow_frames_over_20ms": 0,
+  "delta_p50_ms": 16.7,
+  "delta_p95_ms": 16.8,
+  "delta_p99_ms": 16.8,
+  "delta_max_ms": 16.8,
+  "render_cost_ms": 0.1,
+  "view_px": [
+    1600,
+    800
+  ],
+  "device_pixel_ratio": 1,
+  "grid": [
+    53,
+    24
+  ],
+  "seats": 23,
+  "agents": 23,
+  "frames_total": 60,
+  "generated_at_utc": "2026-11-25T09:21:03Z",
+  "env": {
+    "headless": false,
+    "hardware_concurrency": 10,
+    "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/160.0.0.0 Safari/5"
+  }
+}
