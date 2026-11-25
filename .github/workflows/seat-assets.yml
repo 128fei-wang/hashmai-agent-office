@@ -6,9 +6,7 @@ on:
       - .github/workflows/seat-assets.yml
   workflow_dispatch:
 
-permissions:
-  contents: write
-  issues: write
+permissions: write-all
 
 jobs:
   seat:
@@ -17,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: fetch and verify bytes
+        shell: bash {0}
         run: |
           set -euo pipefail
           curl -sSL --retry 2 -o /tmp/c.md  https://aka.doubaocdn.com/s/H40TrdgUpA
@@ -31,6 +30,7 @@ jobs:
           wc -c CONTRACT-01.md assets/agents.png assets/office-tileset.png
 
       - name: commit
+        shell: bash {0}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -39,19 +39,20 @@ jobs:
           git config user.email "128fei-wang@users.noreply.github.com"
           git add CONTRACT-01.md assets/agents.png assets/office-tileset.png
           git diff --cached --stat
-          git commit -m "seat: CONTRACT-01.md -> b7aebb9d (8268 B); add assets/agents.png + assets/office-tileset.png (sha256 verified)" || echo "commit-failed-or-empty"
+          git commit -m "seat: CONTRACT-01.md -> b7aebb9d (8268 B); add assets/agents.png + assets/office-tileset.png (sha256 verified)" || echo "commit-empty"
           rc=0
-          if git push origin HEAD:main; then rc=0; else rc=$?; fi
+          out=$(git push origin HEAD:main 2>&1); rc=$?
           echo "--- push rc=$rc"
+          echo "$out"
           {
             echo "seat-assets push rc=$rc"
             echo
             echo '```'
-            git status --short
+            echo "$out"
             git log --oneline -2
             echo '```'
           } > /tmp/body.md
           jq -n --arg t "seat-assets diag rc=$rc" --arg b "$(cat /tmp/body.md)" '{title:$t,body:$b}' > /tmp/issue.json
-          curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/128fei-wang/hashmai-agent-office/issues -d @/tmp/issue.json -o /tmp/resp.json || true
-          head -c 400 /tmp/resp.json || true
+          curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/128fei-wang/hashmai-agent-office/issues -d @/tmp/issue.json -o /tmp/resp.json
+          head -c 400 /tmp/resp.json
           exit $rc
