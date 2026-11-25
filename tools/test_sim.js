@@ -110,5 +110,5 @@ const verdict = checks.every(c => c.ok) ? 'PASS' : 'FAIL';
 checks.forEach(c => console.log((c.ok ? 'PASS ' : 'FAIL ') + c.check + ' | ' + c.detail));
 console.log(verdict + ' — ' + checks.filter(c => c.ok).length + '/' + checks.length);
 fs.writeFileSync(path.join(ROOT, 'demo', 'sim-test.json'),
-  JSON.stringify({ verdict, checks, generated_at: new Date().toISOString() }, null, 1));
+  JSON.stringify({ verdict, checks }, null, 1));
 process.exit(verdict === 'PASS' ? 0 : 1);
