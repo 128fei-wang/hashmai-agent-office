@@ -41,5 +41,5 @@
 ## 已知非安全事项
 
 - 面板显示的是**演示/模拟数据**（`?static=1&tasks=2&adv=240`），不代表真实业务状态。
-- 帧率数字来源于特定机型实测（见 [D6-FPS-EVIDENCE-0170BE02.md](D6-FPS-EVIDENCE-0170BE02.md)），
+- 帧率数字来源于特定机型实测（见 [D6-FPS-EVIDENCE.md](D6-FPS-EVIDENCE.md)），
   不构成对其他设备的性能承诺。
