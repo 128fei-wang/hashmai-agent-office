@@ -14,24 +14,22 @@ jobs:
           curl -sSL -o README.md "https://aka.doubaocdn.com/s/Dvss5ZEMIl"
           curl -sSL -o CHANGELOG.md "https://aka.doubaocdn.com/s/GfKE8LnHjC"
           curl -sSL -o ci.yml "https://aka.doubaocdn.com/s/nTlR3kheQA"
-          cat > sums.txt <<'EOF'
-          f6ac3ab1c4bcc04d47127eadee243e5a9b01db93dbb0aeff966d3ef984df0588  contract_selftest.py
-          d9e7514b00a852d8895697f1634f37748b7bf038e001f1b24fee4709a9ef19db  README.md
-          f99991456b671512b02abbe98f6fdad88a24fbba3510879145abccadfc90be47  CHANGELOG.md
-          ccc1421168ad6ddba761b95e886836a45d361aa12766797320814d43a1fce88a  ci.yml
-          EOF
-          sha256sum -c sums.txt
-          gate=$?
-          echo "gate_rc=$gate"
-          if [ "$gate" != "0" ]; then exit 0; fi
+          fail=0
+          echo "f6ac3ab1c4bcc04d47127eadee243e5a9b01db93dbb0aeff966d3ef984df0588  contract_selftest.py" | sha256sum -c - || fail=1
+          echo "d9e7514b00a852d8895697f1634f37748b7bf038e001f1b24fee4709a9ef19db  README.md" | sha256sum -c - || fail=1
+          echo "f99991456b671512b02abbe98f6fdad88a24fbba3510879145abccadfc90be47  CHANGELOG.md" | sha256sum -c - || fail=1
+          echo "ccc1421168ad6ddba761b95e886836a45d361aa12766797320814d43a1fce88a  ci.yml" | sha256sum -c - || fail=1
+          echo "gate_fail=$fail"
+          if [ "$fail" != "0" ]; then exit 1; fi
           git clone --depth 1 "https://x-access-token:${{ github.token }}@github.com/128fei-wang/hashmai-agent-office.git" repo
           install -m 0644 contract_selftest.py repo/tools/contract_selftest.py
           install -m 0644 README.md repo/README.md
           install -m 0644 CHANGELOG.md repo/CHANGELOG.md
           install -m 0644 ci.yml repo/.github/workflows/ci.yml
           cd repo
-          python3 tools/contract_selftest.py > /dev/null
+          python3 tools/contract_selftest.py > selftest.log
           echo "selftest_rc=$?"
+          tail -3 selftest.log
           git config user.name seat-bot
           git config user.email seat-bot@users.noreply.github.com
           git add tools/contract_selftest.py README.md CHANGELOG.md .github/workflows/ci.yml
