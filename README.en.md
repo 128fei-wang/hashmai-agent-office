@@ -8,6 +8,8 @@ instead of a wall of logs.
 
 Built with **PixiJS 8** and plain JavaScript — no bundler, no npm dependencies, one HTML page.
 
+![RoostOffice main view: 23 seats, four task-pipeline rows (the pipeline is a built-in demo script, not live agent data)](https://aka.doubaocdn.com/s/rXTm8toOnS)
+
 - 10 zones, 23 seats, 53×24 tile grid, 1600×800 target viewport
 - WebGL first, automatic Canvas2D fallback (`?force2d=1`)
 - `?selfcheck=1` emits machine-readable JSON for CI / third-party verification

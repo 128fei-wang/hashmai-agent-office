@@ -6,7 +6,7 @@
 > 视觉骨架沿用像素办公室（pixel-office）风格，渲染层自研为 **PixiJS 8 + 原生 JS**，
 > 单页零构建依赖、可完全离线打开。
 
-![RoostOffice](https://aka.doubaocdn.com/s/LrTwIMv09C)
+![RoostOffice 主界面：23 席位、四段任务流水（流水为页面内预置演示事件）](https://aka.doubaocdn.com/s/rXTm8toOnS)
 
 ---
 
