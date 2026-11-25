@@ -1,9 +1,19 @@
+## v0.10 (2026-11-25 · 待发版)
+
+- **MOCK 标注重建**：流水条右下角三行固定标注（任务流水 / MOCK 模拟事件 / 来源：页面内预置演示脚本），防止把演示数据误读为真实遥测。重建后产物：
+  - `demo/office-demo.html` → **78,485 B** · `a96bad44fbbe6c3f7a0786fdcac8bc3a6c89f7b7399939b9b4f96041adbc8e27`
+  - `demo/office-demo-single.html` → **755,547 B** · `e84075267f45e234d79587d16ae3dbabe2cba51516ec6e6ff23cc4467df964dc`
+  - 均可由 `tools/build_demo.py` / `tools/build_single_file.py` 从模板逐字节复现。
+- **契约入树**：`CONTRACT-01.md` 盖入 v1.2 定稿（8,183 B · sha256 `a1c031148a037569f52942ad488925c816dd6c94e904d27a23ed7427ec2ad536`），信封 `v/seq/ts(epoch ms)/kind` 不动，只增 5 事件 / 3 状态 / 2 snapshot 字段。
+- **D6 证据件换当前基线**：`D6-FPS-EVIDENCE.md` 由「历史 `0170be02` 待替换」改为三分结构（当前 `a96bad44` 60.0 fps / 历史 0170be02 / 自我限定）；fps 与 p5x 一律取 DS canonical `d6-fps.json`（`56c5b0dc…f3249`，1600×800、慢帧 0）。
+- **已知未补齐**：`tools/contract_selftest.py` 在干净 clone 下 `schema_validated` 为 `ok:true` 但 `detail=SKIP`（jsonschema 未装），12 条里 1 条空过 —— 不得计作「schema 校验通过」，待换零依赖校验器。
+
 ## v0.9 (2026-11-25)
 
 - 对外显示名定为 **RoostOffice**：`demo/office-demo.template.html` 两处旧名（`<title>` 与 HUD 面板名）改为 `RoostOffice`；README / README.en / `package.json` 同步。
-- 重建产物：`demo/office-demo.html` 78,028 B · `d30c99ee…46e5`；`demo/office-demo-single.html` 755,090 B · `b9e84d50…477e`（均由 `tools/build_demo.py`、`tools/build_single_file.py` 从模板重建，逐字节可复现）。
+- 重建产物（**已被 v0.10 重出覆盖**）：`demo/office-demo.html` 78,028 B · `d30c99ee…46e5` → 现 78,485 B · `a96bad44…8e27`；`demo/office-demo-single.html` 755,090 B · `b9e84d50…477e` → 现 755,547 B · `e8407526…64dc`。
 - 契约 §5/§6 重写：仓库内原件与契约包内原件分列；自验入口拆成「clone 后零依赖 `tools/contract_selftest.py`」与「包内 `verify.sh`（需判据器，缺失 rc=2）」两条，标明依赖不同、不等价。
-- 移除过程补丁 `PATCH-04-NAME.patch`；D6 证据件改名为 `D6-FPS-EVIDENCE.md` 并置为历史证据（旧基线读数不沿用到新字节）。
+- 移除过程补丁 `PATCH-04-NAME.patch`；D6 证据件改名为 `D6-FPS-EVIDENCE.md`（v0.10 已将其更新为当前基线）。
 
 # 更新日志（Changelog）
 
