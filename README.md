@@ -35,7 +35,7 @@
 
 ## 快速开始
 
-### 方式一：直接打开（推荐给评审）
+### 方式一：源码版（需先建素材 + 起本地服务器）
 
 仓库根目录起一个静态服务器，浏览器打开 `/demo/office-demo.html`：
 
@@ -46,12 +46,14 @@ python3 -m http.server 8080
 # 浏览器打开 http://localhost:8080/demo/office-demo.html
 ```
 
-> 直接双击 `demo/office-demo.html` 也能跑（脚本与素材都是相对路径），
-> 但部分浏览器会因 `file://` 限制读不到 `../assets` 与 `./lib`，所以推荐上面的方式。
+> **想看画面，先分清两件事：**
+> - **双击就能看的**：只有 `demo/office-demo-single.html`（方式二）——依赖全内联，不需要服务器、不需要素材。
+> - **`demo/office-demo.html` 双击看不到完整画面**：它引用 `../assets/office-tileset.png`、`../assets/agents.png`
+>   和 `./lib/pixi.min.js`，而 `assets/*.png` 按约定不入库（`demo/shots/` 截图同样不入库）。
+>   clone 后必须先跑「方式三」前四条生成素材，再用静态服务器打开——否则会回落到纯色块，
+>   看起来像「降级/坏了」，其实是素材没生成。
 >
-> **仓库不提交构建产物**：`assets/*.png`（贴图集 / 角色精灵）与 `demo/shots/` 截图不入库。
-> 从源码跑 `demo/office-demo.html` 前，先执行下面「方式三」的前四条生成素材；
-> 想零构建直接看，用「方式二」单文件版。
+> 一句话：**评审要双击即开，发单文件版；要改代码看源码版，先跑素材 + 起 http。**
 
 **常用 URL 参数**
 
@@ -64,7 +66,7 @@ python3 -m http.server 8080
 
 ### 方式二：单文件版（零依赖验收入口）
 
-`demo/office-demo-single.html`（约 737 KB）把 PixiJS、`sim.js`、贴图全部内联，双击即开、
+`demo/office-demo-single.html`（约 755 KB，`755,090 B`）把 PixiJS、`sim.js`、贴图全部内联，双击即开、
 不需服务器、不需同目录其它文件。用于「只拿到一个 html 也要能看」的场景。
 
 ### 方式三：从源码重建
