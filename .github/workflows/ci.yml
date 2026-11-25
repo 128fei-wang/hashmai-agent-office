@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 单测与校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 状态机单测（期望 9/9）
+        run: node tools/test_sim.js
+
+      - name: 工位编号一致性（期望 rc=0）
+        run: python3 tools/check_seat_ids.py --require-unified
+
+      - name: 契约自测（无 jsonschema 的干净机器，期望 PASS 且 SKIP 不拉红）
+        run: |
+          set -e
+          python3 -c "import jsonschema" 2>/dev/null || echo "jsonschema 未安装，走 SKIP 路径"
+          python3 tools/contract_selftest.py | tail -3
+
+      - name: 契约自测（装 jsonschema，走严格 schema 校验）
+        run: |
+          set -e
+          python3 -m pip install -q -r requirements-dev.txt
+          python3 tools/contract_selftest.py | tail -3
+
+      - name: JSON 文件可解析
+        run: |
+          set -e
+          for f in $(git ls-files '*.json'); do
+            python3 -c "import json,sys; json.load(open(sys.argv[1], encoding='utf-8'))" "$f"
+          done
+          echo "JSON OK"
+
+  build-reproducible:
+    name: 产物可复现（模板重建 == 仓库内产物）
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 生成素材（PNG 不入库，由脚本重建）
+        run: |
+          set -e
+          python3 -m pip install -q -r requirements-dev.txt pillow
+          python3 tools/build_tiles.py | tail -5
+          python3 tools/build_sprites.py | tail -5
+          ls -l assets/
+
+      - name: 素材生成确定性（同输入两次生成逐字节一致）
+        run: |
+          set -e
+          cp assets/office-tileset.png /tmp/t1.png
+          cp assets/agents.png /tmp/s1.png
+          python3 tools/build_tiles.py >/dev/null
+          python3 tools/build_sprites.py >/dev/null
+          cmp /tmp/t1.png assets/office-tileset.png
+          cmp /tmp/s1.png assets/agents.png
+          echo "素材生成确定性 OK"
+
+      - name: 记录提交时的产物 sha
+        run: sha256sum demo/office-demo.html | tee /tmp/before.txt
+
+      - name: 从模板重建
+        run: python3 tools/build_demo.py | tail -5
+
+      - name: 比对产物逐字节一致
+        run: |
+          set -e
+          sha256sum demo/office-demo.html | tee /tmp/after.txt
+          diff -u /tmp/before.txt /tmp/after.txt || {
+            echo "::error::demo/office-demo.html 与模板重建结果不一致——请修改模板后重新构建并提交产物"
+            exit 1
+          }
+          echo "产物可复现 OK"
+
+      - name: 单文件版可构建且无外部引用
+        run: |
+          set -e
+          python3 tools/build_single_file.py
+          test -s demo/office-demo-single.html
+          python3 - <<'PY'
+          import re
+          html = open('demo/office-demo-single.html', encoding='utf-8').read()
+          bad = re.findall(r'(?:src|href)=["\']?\.\.?/', html)
+          assert not bad, f"单文件版仍残留外部引用: {bad[:5]}"
+          print("单文件版无外部引用 OK，大小", len(html), "字节")
+          PY
+
+  static-audit:
+    name: 静态审计（无外链 / 无凭据 / 自检锚点在位）
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 面板不发起网络请求
+        run: |
+          set -e
+          # 只扫自研代码；demo/lib/ 是内置的第三方库（PixiJS），不参与本项审计
+          if git grep -nE "fetch\(|XMLHttpRequest|wss?://|https?://[a-z0-9.-]+\.(com|cn|net)" -- \
+              'demo/office-demo.template.html' 'demo/office-demo.html' 'demo/sim.js' ; then
+            echo "::error::面板自研代码出现网络请求或外部地址"
+            exit 1
+          fi
+          echo "无网络请求 OK"
+
+      - name: 自检锚点在位
+        run: |
+          set -e
+          grep -q 'sc-json' demo/office-demo.html
+          grep -q 'selfcheck' demo/office-demo.template.html
+          echo "自检锚点 OK"
+
+      - name: 无凭据残留
+        run: |
+          set -e
+          if git grep -nE "sk-[A-Za-z0-9]{16,}|Bearer\s+[A-Za-z0-9._-]{20,}|BEGIN (RSA |OPENSSH )?PRIVATE KEY" ; then
+            echo "::error::发现疑似凭据"
+            exit 1
+          fi
+          echo "无凭据 OK"
