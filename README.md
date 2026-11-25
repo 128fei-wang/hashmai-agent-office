@@ -112,8 +112,7 @@ CI（`.github/workflows/ci.yml`）在每次 push / PR 时跑上述两项，外�
 | 慢帧（>20ms） | 0 |
 | 渲染侧单帧成本 | 0.14 ms |
 
-判据框架 P98（功能 / 工具 / 结构 / 数据 / 性能 / UI 六维，10 分制）见
-[`ROOST-GAP-BOARD.md`](ROOST-GAP-BOARD.md) 与外部判据器项目 `p98-criteria-01`。
+判据框架 P98（功能 / 工具 / 结构 / 数据 / 性能 / UI 六维，10 分制）：仓库内保留可复跑命令与证据文件，判据器本体由外部项目 `p98-criteria-01` 维护。
 
 ---
 
@@ -144,9 +143,6 @@ CI（`.github/workflows/ci.yml`）在每次 push / PR 时跑上述两项，外�
 | [`ROOST-UI-ARCH-01.md`](ROOST-UI-ARCH-01.md) | 整体 UI 架构与渲染分层 |
 | [`OFFICE-MAP-01.md`](OFFICE-MAP-01.md) | 地图分区、可行走格、相机与 LOD |
 | [`SEAT-ID-MAP.md`](SEAT-ID-MAP.md) | 工位编号规范（牌面 = seat_id） |
-| [`DEMO-V01.md`](DEMO-V01.md) | Demo 迭代记录（v0.1 → v0.8） |
-| [`BATCH-MERGE-RUNBOOK.md`](BATCH-MERGE-RUNBOOK.md) | 补丁批次、合入与回滚 runbook |
-| [`ROOST-GAP-BOARD.md`](ROOST-GAP-BOARD.md) | 六维判据差距看板 |
 | [`CONTRACT-01.md`](CONTRACT-01.md) | 对外契约（事件 schema / 席位模型） |
 | [`D5-DEST-SHARED-ROUTE.md`](D5-DEST-SHARED-ROUTE.md) | 目的地共享寻路与 30/50 agent 压测 |
 | [`D6-FPS-EVIDENCE-0170BE02.md`](D6-FPS-EVIDENCE-0170BE02.md) | 帧率第三方实测证据 |

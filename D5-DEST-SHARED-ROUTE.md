@@ -71,7 +71,7 @@ node tools/test_sim.js                                          → PASS 9/9（�
 ## 6. 复跑
 
 ```
-cd /Users/hashmai/roost-im/roost-ui-arch
+cd <仓库根>
 node tools/bench_d5_dedup.js          # 输出 demo/d5-dedup-bench.json；等价性失败或超预算则 rc=1
 ```
 

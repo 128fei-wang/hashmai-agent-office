@@ -85,10 +85,10 @@
 
 ## 5. 原件位置
 
-包目录 `/Users/hashmai/clawchat-out/roost-contract-01/`：
+契约包（外部交付包）：
 `agent-event.schema.json`（v1.2）、`CONTRACT-01.md`（本文件）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`（23 席重述版）、`ROOST-UI-ARCH-01.md`、`office-map.tmj`、`office-tileset.png`（128×128，之前漏发）、`agents.png`、`d6-page-selfcheck.json`、`SHA256SUMS.txt`、`verify.sh`（包自验入口）。
 
-源码根 `/Users/hashmai/roost-im/roost-ui-arch/`；判据器 `/Users/hashmai/roost-im/p98-criteria-01/P98-CRITERIA-01-20261124/`。
+源码根：本仓库根目录；判据器：外部项目 `p98-criteria-01/P98-CRITERIA-01-20261124/`。
 
 ## 6. 包自验入口（零依赖，可复现）
 
