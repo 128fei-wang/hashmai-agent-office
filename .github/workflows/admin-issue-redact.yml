@@ -1,0 +1,33 @@
+name: admin-issue-redact
+on:
+  push:
+    paths:
+      - '.github/workflows/admin-issue-redact.yml'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  redact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Redact and close issue 6
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - "$GH_TOKEN" <<'PY'
+import json, sys, urllib.request
+body = "redacted: this diagnostic issue previously contained a temporary clone credential, now removed.\n\nRoot cause recorded: a GitHub App installation token has no `workflows` permission, so `git push` is rejected when a commit touches `.github/workflows/*` (message: refusing to allow a GitHub App to create or update workflow). Workflow files must be written through the API path instead.\n\nDiagnostic run logs are no longer needed."
+payload = json.dumps({"body": body, "state": "closed", "state_reason": "not_planned"}).encode()
+req = urllib.request.Request(
+    "https://api.github.com/repos/128fei-wang/hashmai-agent-office/issues/6",
+    data=payload,
+    method="PATCH",
+    headers={"Authorization": "Bearer " + sys.argv[1], "Accept": "application/vnd.github+json", "Content-Type": "application/json", "User-Agent": "roost-redact"},
+)
+resp = urllib.request.urlopen(req, timeout=30)
+print("issue_patch_status", resp.status)
+PY
