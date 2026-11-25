@@ -1,3 +1,10 @@
+## v0.9 (2026-11-25)
+
+- 对外显示名定为 **RoostOffice**：`demo/office-demo.template.html` 两处旧名（`<title>` 与 HUD 面板名）改为 `RoostOffice`；README / README.en / `package.json` 同步。
+- 重建产物：`demo/office-demo.html` 78,028 B · `d30c99ee…46e5`；`demo/office-demo-single.html` 755,090 B · `b9e84d50…477e`（均由 `tools/build_demo.py`、`tools/build_single_file.py` 从模板重建，逐字节可复现）。
+- 契约 §5/§6 重写：仓库内原件与契约包内原件分列；自验入口拆成「clone 后零依赖 `tools/contract_selftest.py`」与「包内 `verify.sh`（需判据器，缺失 rc=2）」两条，标明依赖不同、不等价。
+- 移除过程补丁 `PATCH-04-NAME.patch`；D6 证据件改名为 `D6-FPS-EVIDENCE.md` 并置为历史证据（旧基线读数不沿用到新字节）。
+
 # 更新日志（Changelog）
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，

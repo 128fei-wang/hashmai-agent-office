@@ -1,5 +1,5 @@
 {
-  "name": "hashmai-agent-office",
+  "name": "roostoffice",
   "version": "0.8.0",
   "private": false,
   "description": "A pixel-style, single-page multi-agent office dashboard: boss -> ops center -> departments (<=3 seats each), built with PixiJS 8 and zero build dependencies.",

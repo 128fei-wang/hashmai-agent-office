@@ -85,18 +85,28 @@
 
 ## 5. 原件位置
 
-契约包（外部交付包）：
-`agent-event.schema.json`（v1.2）、`CONTRACT-01.md`（本文件）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`（23 席重述版）、`ROOST-UI-ARCH-01.md`、`office-map.tmj`、`office-tileset.png`（128×128，之前漏发）、`agents.png`、`d6-page-selfcheck.json`、`SHA256SUMS.txt`、`verify.sh`（包自验入口）。
+本文件描述的两类原件分处两棵树，清单分开列，不写成同一套路径。
 
-源码根：本仓库根目录；判据器：外部项目 `p98-criteria-01/P98-CRITERIA-01-20261124/`。
+**仓库内原件（源码根＝本仓库根目录）**
+`agent-event.schema.json`（v1.2）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`（23 席重述版）、`ROOST-UI-ARCH-01.md`、`assets/office-map.tmj`、`tools/`（构建与校验脚本）、`demo/`（页面与单文件验收版）。
 
-## 6. 包自验入口（零依赖，可复现）
+**契约包内原件（`roost-contract-01/` 目录）**
+`agent-event.schema.json`、`CONTRACT-01.md`（本文件）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`、`ROOST-UI-ARCH-01.md`、`office-map.tmj`、`office-tileset.png`、`agents.png`、`demo/office-demo.html`、`d6-page-selfcheck.json`、`SHA256SUMS.txt`、`lib/pixi.min.js`、`verify.sh`（包自验入口）。
+
+判据器不在两棵树里，由 `verify.sh` 按顺序查找：`$P98`（显式指定）→ 包内 `./p98check.py` → `../p98-criteria-01/*/p98check.py` → `$HOME/roost-im/p98-criteria-01/*/p98check.py`。
+
+## 6. 自验入口（两条，依赖不同，不等价）
 
 ```sh
-cd roost-contract-01 && sh verify.sh                 # 自动找判据器
-P98=/path/p98check.py sh verify.sh                   # 显式指定
+# ① clone 后零依赖：仓库自带契约自检（只用 python3 标准库）
+python3 tools/contract_selftest.py
+
+# ② 判据侧：契约包内 17 项包断言 + D3/D6
+cd roost-contract-01 && sh verify.sh
+P98=/path/to/p98check.py sh verify.sh     # 判据器不在上述默认位置时显式指定
 ```
 
+- ① 验 seq 单调、幂等、缺口补拉、环容量，产出 `contract-selftest.json`；不需要判据器、不联网。
 - **不依赖第三方库**：schema 校验用包内内置的 JSON Schema 子集校验器（只 python3 标准库），不需要 `pip install jsonschema`、不联网。
 - 覆盖 **17 条**包内断言：schema 2020-12 / 12 事件 / 9 态 / 两份样例合法 / 四条反例必须被拒（B 世代信封、未知事件键、`state=queued`、非法 `seat_id`）/ headcount 23 = 席位和 / 7 部门各 ≤3 / boss 2 / `standby_seats=0` 且 cap=3 / `seat_id` 命名与 zone 绑定 / seat-model 与 zones 一致。
 - 退出码：**0 全过（含 D3/D6 实跑 5/5）｜1 有 FAIL｜2 判据器缺失或维记 UNTESTED**。不再用 `|| true` 吞失败。

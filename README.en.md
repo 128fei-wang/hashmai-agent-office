@@ -1,4 +1,4 @@
-# 将哈希麦多 agent 办公室（Hashmai Multi-Agent Office）
+# RoostOffice — a Roost-style Multi-Agent Office
 
 A pixel-style, single-page **multi-agent office dashboard**. A company laid out as a walkable
 office map: the boss's office issues orders, the operations center dispatches them, and every

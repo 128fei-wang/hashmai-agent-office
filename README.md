@@ -1,4 +1,4 @@
-# 哈希麦多 agent 办公室（Hashmai Multi-Agent Office）
+# RoostOffice（Roost 多 Agent 办公室）
 
 > 把一个公司的组织架构画进一张可交互的办公室地图：老板办公室下达命令，总经理运营中心接单，
 > HR / 财务 / 技术 / 数据 / UI / QA 各部门 ≤3 个工位，agent 在工位间走动、接单、回报。
@@ -6,7 +6,7 @@
 > 视觉骨架沿用像素办公室（pixel-office）风格，渲染层自研为 **PixiJS 8 + 原生 JS**，
 > 单页零构建依赖、可完全离线打开。
 
-![哈希麦多 agent 办公室](https://aka.doubaocdn.com/s/LrTwIMv09C)
+![RoostOffice](https://aka.doubaocdn.com/s/LrTwIMv09C)
 
 ---
 
@@ -29,7 +29,7 @@
 | 单文件验收版（内联依赖，双击即开，无需服务器） | 已实现 |
 | 接真实事件流（store）+ 点席位查详情 + 30 秒回放 | 规划中 |
 
-当前版本 **v0.8**（改名「哈希麦多 agent 办公室」+ 首帧 HUD 修复）。
+当前版本 **v0.9**（对外名定为 **RoostOffice** + 首帧 HUD 修复）。
 
 ---
 
