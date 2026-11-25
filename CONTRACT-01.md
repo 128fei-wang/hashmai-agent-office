@@ -85,31 +85,21 @@
 
 ## 5. 原件位置
 
-本文件描述的两类原件分处两棵树，清单分开列，不写成同一套路径。
+包目录（本包根 `roost-contract-01/`）：
+`agent-event.schema.json`（v1.2）、`CONTRACT-01.md`（本文件）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`（23 席重述版）、`ROOST-UI-ARCH-01.md`、`office-map.tmj`、`office-tileset.png`（128×128，之前漏发）、`agents.png`、`d6-page-selfcheck.json`（Pixi 单舞台路径 + 真 GPU fps）、`d6-fps.json`（fps 原始探针输出，DS canonical 落盘原件 `56c5b0dc`）、`SHA256SUMS.txt`、`verify.sh`（包自验入口）。
 
-**仓库内原件（源码根＝本仓库根目录）**
-`agent-event.schema.json`（v1.2）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`（23 席重述版）、`ROOST-UI-ARCH-01.md`、`assets/office-map.tmj`、`tools/`（构建与校验脚本）、`demo/`（页面与单文件验收版）。
+源码根与判据器随仓库分发，不在此写本机绝对路径；判据器按 §6 的查找顺序（`$P98` → `./p98check.py` → `../p98-criteria-01/*/`）定位。
 
-**契约包内原件（`roost-contract-01/` 目录）**
-`agent-event.schema.json`、`CONTRACT-01.md`（本文件）、`office-zones.json`、`seat-model.json`、`sample-envelope.json`、`sample-envelope-v12.json`、`OFFICE-MAP-01.md`、`ROOST-UI-ARCH-01.md`、`office-map.tmj`、`office-tileset.png`、`agents.png`、`demo/office-demo.html`、`d6-page-selfcheck.json`、`SHA256SUMS.txt`、`lib/pixi.min.js`、`verify.sh`（包自验入口）。
-
-判据器不在两棵树里，由 `verify.sh` 按顺序查找：`$P98`（显式指定）→ 包内 `./p98check.py` → `../p98-criteria-01/*/p98check.py` → `$HOME/roost-im/p98-criteria-01/*/p98check.py`。
-
-## 6. 自验入口（两条，依赖不同，不等价）
+## 6. 包自验入口（零依赖，可复现）
 
 ```sh
-# ① clone 后零依赖：仓库自带契约自检（只用 python3 标准库）
-python3 tools/contract_selftest.py
-
-# ② 判据侧：契约包内 17 项包断言 + D3/D6
-cd roost-contract-01 && sh verify.sh
-P98=/path/to/p98check.py sh verify.sh     # 判据器不在上述默认位置时显式指定
+cd roost-contract-01 && sh verify.sh                 # 自动找判据器
+P98=/path/p98check.py sh verify.sh                   # 显式指定
 ```
 
-- ① 验 seq 单调、幂等、缺口补拉、环容量，产出 `contract-selftest.json`；不需要判据器、不联网。
 - **不依赖第三方库**：schema 校验用包内内置的 JSON Schema 子集校验器（只 python3 标准库），不需要 `pip install jsonschema`、不联网。
 - 覆盖 **17 条**包内断言：schema 2020-12 / 12 事件 / 9 态 / 两份样例合法 / 四条反例必须被拒（B 世代信封、未知事件键、`state=queued`、非法 `seat_id`）/ headcount 23 = 席位和 / 7 部门各 ≤3 / boss 2 / `standby_seats=0` 且 cap=3 / `seat_id` 命名与 zone 绑定 / seat-model 与 zones 一致。
 - 退出码：**0 全过（含 D3/D6 实跑 5/5）｜1 有 FAIL｜2 判据器缺失或维记 UNTESTED**。不再用 `|| true` 吞失败。
 - 实测：`sh verify.sh` → `PKG_CHECKS pass=17 fail=0`，D3 5/5、D6 5/5，rc=0；`P98=/nonexistent` → rc=2；故意把 `seat-model.json` 改 20 席 → rc=1 且两行 FAIL。
 
-> 判据口径说明：`s4_entry_commands` 现在**可执行验证**（跑 `verify.sh` 拿退出码），不再只读声明字段。D6 的 `u3_fps` 仍是 headless Canvas2D 路径实测，真机 WebGL 未测；若按「未测即 NA」计，D6 记 4/5——这一条以 DS 的读法为准。
+> 判据口径说明：`s4_entry_commands` 现在**可执行验证**（跑 `verify.sh` 拿退出码），不再只读声明字段。D6 的 `u3_fps` 已从「未测」变成**实测**：`d6-page-selfcheck.json` 换为 Pixi 单舞台（WebGL2）路径的页面自检，帧率取 `d6-fps.json`（DS canonical 落盘原件 `56c5b0dc`）——本机 M5、ANGLE Metal 真 GPU、真实 `performance.now`（不设 `--virtual-time-budget`），丢 90 帧预热后采 300 帧：**60.0 fps、p50 16.7ms、p95 16.8ms、p99 16.8ms、>20ms 慢帧 0**；`--force-device-scale-factor=2`（3200×1600 背衬）复跑同为 60.0 fps、慢帧 0。口径边界写清：headless 无窗口管理器，60Hz 是 BeginFrame 节拍，所以结论只能到「≥60 且零掉帧」，不等于设备天花板。D6 因此记 **5/5**，是否采信由 DS 复跑后定。
